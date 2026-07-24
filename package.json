@@ -1,0 +1,40 @@
+{
+  "name": "ai-publishing-os",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.9.0",
+  "scripts": {
+    "dev": "pnpm --filter @ai-publishing-os/dashboard dev",
+    "build": "pnpm db:generate && pnpm --filter @ai-publishing-os/dashboard build",
+    "format": "prettier --write . --ignore-unknown",
+    "format:check": "prettier --check . --ignore-unknown",
+    "lint": "pnpm --filter @ai-publishing-os/dashboard lint",
+    "typecheck": "pnpm db:generate && pnpm -r --if-present typecheck && tsc -p tests/tsconfig.json --noEmit",
+    "test": "pnpm test:unit",
+    "test:unit": "pnpm --filter @ai-publishing-os/dashboard test",
+    "test:integration": "tsx scripts/run-integration-tests.ts",
+    "test:e2e:install": "playwright install chromium",
+    "test:e2e": "playwright test",
+    "env:validate": "tsx scripts/validate-environment.ts",
+    "db:generate": "pnpm --filter @ai-publishing-os/database db:generate",
+    "db:validate": "pnpm --filter @ai-publishing-os/database db:validate",
+    "db:migrate:dev": "pnpm --filter @ai-publishing-os/database db:migrate:dev",
+    "db:migrate:deploy": "pnpm --filter @ai-publishing-os/database db:migrate:deploy",
+    "db:studio": "pnpm --filter @ai-publishing-os/database db:studio",
+    "docker:config": "docker compose -f infrastructure/compose.yaml config",
+    "docker:up": "docker compose -f infrastructure/compose.yaml up --build",
+    "docker:down": "docker compose -f infrastructure/compose.yaml down"
+  },
+  "devDependencies": {
+    "@ai-publishing-os/database": "workspace:*",
+    "@ai-publishing-os/schemas": "workspace:*",
+    "@playwright/test": "1.61.1",
+    "@types/node": "26.1.1",
+    "dotenv": "17.4.2",
+    "prettier": "3.9.6",
+    "tsx": "4.23.1",
+    "typescript": "5.9.3",
+    "vitest": "4.1.10",
+    "zod": "4.4.3"
+  }
+}

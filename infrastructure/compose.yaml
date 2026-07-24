@@ -1,0 +1,68 @@
+name: ai-publishing-os
+
+services:
+  database:
+    image: postgres:18.4-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-publishing_os}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-database-only-2026}
+      POSTGRES_USER: ${POSTGRES_USER:-publishing_os}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-publishing_os} -d ${POSTGRES_DB:-publishing_os}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  dashboard:
+    build:
+      context: ..
+      dockerfile: infrastructure/Dockerfile.dashboard
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-compose-development-secret-change-before-sharing}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-publishing_os}:${POSTGRES_PASSWORD:-local-database-only-2026}@database:5432/${POSTGRES_DB:-publishing_os}?schema=public
+      TEST_DATABASE_URL: postgresql://${POSTGRES_USER:-publishing_os}:${POSTGRES_PASSWORD:-local-database-only-2026}@database:5432/publishing_os_test?schema=public
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-compose-internal-api-key-change-before-sharing}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      DEV_AUTH_EMAIL: ${DEV_AUTH_EMAIL:-developer@example.com}
+      DEV_AUTH_PASSWORD: ${DEV_AUTH_PASSWORD:-local-development-only-2026}
+      DEV_AUTH_NAME: ${DEV_AUTH_NAME:-Local Developer}
+    command:
+      [
+        "sh",
+        "-c",
+        "pnpm db:migrate:deploy && pnpm --filter @ai-publishing-os/dashboard dev --hostname 0.0.0.0",
+      ]
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+volumes:
+  postgres_data:

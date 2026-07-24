@@ -1,0 +1,219 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum SiteStatus {
+  ACTIVE   @map("active")
+  INACTIVE @map("inactive")
+  ARCHIVED @map("archived")
+
+  @@map("site_status")
+}
+
+enum SourceType {
+  WEBSITE        @map("website")
+  RSS            @map("rss")
+  NEWS_API       @map("news_api")
+  SEARCH_CONSOLE @map("search_console")
+  MANUAL         @map("manual")
+
+  @@map("source_type")
+}
+
+enum CollectionMethod {
+  API    @map("api")
+  RSS    @map("rss")
+  CRAWL  @map("crawl")
+  MANUAL @map("manual")
+
+  @@map("collection_method")
+}
+
+enum TrustLevel {
+  LOW    @map("low")
+  MEDIUM @map("medium")
+  HIGH   @map("high")
+
+  @@map("trust_level")
+}
+
+enum CollectionFrequency {
+  MANUAL  @map("manual")
+  HOURLY  @map("hourly")
+  DAILY   @map("daily")
+  WEEKLY  @map("weekly")
+  MONTHLY @map("monthly")
+
+  @@map("collection_frequency")
+}
+
+enum TopicStatus {
+  CANDIDATE               @map("candidate")
+  REVIEWING               @map("reviewing")
+  APPROVED                @map("approved")
+  RESEARCHING             @map("researching")
+  BRIEF_READY             @map("brief_ready")
+  DRAFTING                @map("drafting")
+  QUALITY_REVIEW          @map("quality_review")
+  AWAITING_APPROVAL       @map("awaiting_approval")
+  APPROVED_FOR_PUBLISHING @map("approved_for_publishing")
+  PUBLISHED               @map("published")
+  REJECTED                @map("rejected")
+  FAILED                  @map("failed")
+
+  @@map("topic_status")
+}
+
+enum TopicPriority {
+  LOW    @map("low")
+  MEDIUM @map("medium")
+  HIGH   @map("high")
+  URGENT @map("urgent")
+
+  @@map("topic_priority")
+}
+
+enum EvidenceType {
+  MANUAL      @map("manual")
+  SOURCE      @map("source")
+  TREND       @map("trend")
+  KEYWORD     @map("keyword")
+  COMPETITOR  @map("competitor")
+  PERFORMANCE @map("performance")
+
+  @@map("evidence_type")
+}
+
+model User {
+  id        String     @id @default(cuid())
+  name      String?
+  email     String     @unique
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+  auditLogs AuditLog[]
+
+  @@map("users")
+}
+
+model Site {
+  id             String         @id @default(cuid())
+  name           String
+  domain         String         @unique
+  niche          String?
+  language       String         @default("en")
+  targetAudience String?        @map("target_audience")
+  status         SiteStatus     @default(ACTIVE)
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+  sourceConfigs  SourceConfig[]
+  topics         Topic[]
+
+  @@index([status])
+  @@map("sites")
+}
+
+model SourceConfig {
+  id                  String              @id @default(cuid())
+  siteId              String              @map("site_id")
+  name                String
+  sourceType          SourceType          @map("source_type")
+  baseUrl             String?             @map("base_url")
+  collectionMethod    CollectionMethod    @map("collection_method")
+  trustLevel          TrustLevel          @default(MEDIUM) @map("trust_level")
+  collectionFrequency CollectionFrequency @default(MANUAL) @map("collection_frequency")
+  isActive            Boolean             @default(true) @map("is_active")
+  lastCollectedAt     DateTime?           @map("last_collected_at")
+  metadata            Json?
+  createdAt           DateTime            @default(now()) @map("created_at")
+  updatedAt           DateTime            @updatedAt @map("updated_at")
+  site                Site                @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  evidence            TopicEvidence[]
+
+  @@unique([siteId, name])
+  @@index([siteId, isActive])
+  @@index([isActive, lastCollectedAt])
+  @@map("source_configs")
+}
+
+model Topic {
+  id              String          @id @default(cuid())
+  siteId          String          @map("site_id")
+  title           String
+  normalizedTitle String          @map("normalized_title")
+  description     String?
+  status          TopicStatus     @default(CANDIDATE)
+  priority        TopicPriority   @default(MEDIUM)
+  totalScore      Int             @default(0) @map("total_score")
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+  site            Site            @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  evidence        TopicEvidence[]
+  scores          TopicScore[]
+
+  @@unique([siteId, normalizedTitle])
+  @@index([siteId, status, priority])
+  @@index([siteId, totalScore])
+  @@map("topics")
+}
+
+model TopicEvidence {
+  id             String        @id @default(cuid())
+  topicId        String        @map("topic_id")
+  sourceConfigId String?       @map("source_config_id")
+  evidenceType   EvidenceType  @map("evidence_type")
+  sourceUrl      String        @map("source_url")
+  sourceTitle    String?       @map("source_title")
+  excerpt        String?
+  collectedAt    DateTime      @map("collected_at")
+  metadata       Json?
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  topic          Topic         @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  sourceConfig   SourceConfig? @relation(fields: [sourceConfigId], references: [id], onDelete: SetNull)
+
+  @@unique([topicId, sourceUrl, evidenceType])
+  @@index([topicId, collectedAt])
+  @@index([sourceConfigId])
+  @@map("topic_evidence")
+}
+
+model TopicScore {
+  id                    String   @id @default(cuid())
+  topicId               String   @map("topic_id")
+  audienceRelevance     Int      @map("audience_relevance")
+  evidenceStrength      Int      @map("evidence_strength")
+  businessValue         Int      @map("business_value")
+  contentGap            Int      @map("content_gap")
+  freshness             Int
+  sourceReliability     Int      @map("source_reliability")
+  productionFeasibility Int      @map("production_feasibility")
+  total                 Int
+  rationale             String?
+  createdAt             DateTime @default(now()) @map("created_at")
+  topic                 Topic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@index([topicId, createdAt])
+  @@map("topic_scores")
+}
+
+model AuditLog {
+  id            String   @id @default(cuid())
+  userId        String?  @map("user_id")
+  entityType    String   @map("entity_type")
+  entityId      String   @map("entity_id")
+  action        String
+  previousValue Json?    @map("previous_value")
+  newValue      Json?    @map("new_value")
+  createdAt     DateTime @default(now()) @map("created_at")
+  user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId, createdAt])
+  @@index([userId, createdAt])
+  @@map("audit_logs")
+}

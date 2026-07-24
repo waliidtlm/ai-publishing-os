@@ -1,0 +1,13 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM"],
+    "types": ["node", "vitest/globals"]
+  },
+  "include": [
+    "../playwright.config.ts",
+    "../vitest.integration.config.ts",
+    "../scripts/**/*.ts",
+    "./**/*.ts"
+  ]
+}

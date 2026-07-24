@@ -1,0 +1,14 @@
+.git
+.next
+**/.next
+node_modules
+**/node_modules
+coverage
+playwright-report
+test-results
+*.log
+*.tsbuildinfo
+.env
+.env.local
+.env.*.local
+packages/database/generated
