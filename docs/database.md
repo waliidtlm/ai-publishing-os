@@ -17,6 +17,7 @@ driver adapter.
 - `AuditLog`: mutation history with optional user attribution.
 - `IntakeIdempotencyRecord`: site-scoped request hash and stored intake result.
 - `InternalApiRateLimitBucket`: shared fixed-window internal API counters.
+- `RssCollectionRun`: bounded per-source RSS collection history and counts.
 
 The database stores operational fields in typed columns. JSON is reserved for
 optional metadata and before/after audit snapshots.
@@ -31,6 +32,8 @@ optional metadata and before/after audit snapshots.
 - New intake evidence also has a topic-scoped deterministic fingerprint.
 - Intake idempotency keys are unique within their site/integration scope.
 - Rate-limit buckets are unique by scope, identifier, and time window.
+- RSS source collection limits are null or between 1 and 100.
+- RSS run counts and durations are non-negative.
 - Site-owned records cascade on site/topic deletion.
 - Audit-log users and evidence source configurations become null when the
   referenced optional record is deleted.

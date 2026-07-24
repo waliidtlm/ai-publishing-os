@@ -1,0 +1,882 @@
+{
+  "name": "AI Publishing OS - RSS Collector",
+  "nodes": [
+    {
+      "id": "e6f42538-ad08-4718-b886-a149d76c4480",
+      "name": "Manual Test Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 200],
+      "parameters": {}
+    },
+    {
+      "id": "621822cb-5d97-4f9e-a794-02d441291cfe",
+      "name": "Load Active RSS Sources",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [260, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.AI_PUBLISHING_OS_BASE_URL + '/api/internal/sources/rss' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": false,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 15000
+        }
+      }
+    },
+    {
+      "id": "800a54d4-b758-471e-ae0c-88e3c83ff152",
+      "name": "Split Active Sources",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [520, 300],
+      "parameters": {
+        "fieldToSplitOut": "body.data.sources",
+        "include": "noOtherFields",
+        "options": {
+          "destinationFieldName": "source"
+        }
+      }
+    },
+    {
+      "id": "1f527d2a-3d66-4f37-9d22-c96693bfd11e",
+      "name": "Record Collection Start",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [780, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AI_PUBLISHING_OS_BASE_URL + '/api/internal/sources/' + $json.source.id + '/collection-result' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ { status: 'started', workflowExecutionId: $execution.id, startedAt: $now.toISO() } }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 15000
+        }
+      }
+    },
+    {
+      "id": "ba700d9a-5b43-4065-82a0-f4d654149eab",
+      "name": "Attach Run Context",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1040, 300],
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "source-context",
+              "name": "source",
+              "type": "object",
+              "value": "={{ $('Split Active Sources').item.json.source }}"
+            },
+            {
+              "id": "run-id",
+              "name": "runId",
+              "type": "string",
+              "value": "={{ $json.body?.data?.runId ?? '' }}"
+            },
+            {
+              "id": "started-at",
+              "name": "startedAt",
+              "type": "string",
+              "value": "={{ $now.toISO() }}"
+            },
+            {
+              "id": "start-ok",
+              "name": "startOk",
+              "type": "boolean",
+              "value": "={{ [200, 201].includes($json.statusCode) && $json.body?.success === true }}"
+            },
+            {
+              "id": "start-error",
+              "name": "startError",
+              "type": "object",
+              "value": "={{ $json.body?.error ?? { code: 'collection_start_failed', message: 'Collection start could not be recorded.' } }}"
+            }
+          ]
+        },
+        "includeOtherFields": false
+      }
+    },
+    {
+      "id": "bfc6a0e8-c200-47d5-b382-c8890682d8e9",
+      "name": "Collection Start Recorded?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [1300, 300],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.startOk }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "01cf4410-2dc2-498c-bf6c-81e520b92063",
+      "name": "Fetch Parsed Feed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [1560, 180],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AI_PUBLISHING_OS_BASE_URL + '/api/internal/sources/' + $json.source.id + '/fetch' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.source.collectionLimit ? { entryLimit: $json.source.collectionLimit } : {} }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 70000
+        }
+      }
+    },
+    {
+      "id": "35191e50-fd15-45a7-a66d-430eda0efe39",
+      "name": "Attach Fetch Context",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1810, 180],
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fetch-context",
+              "name": "context",
+              "type": "object",
+              "value": "={{ $('Attach Run Context').item.json }}"
+            }
+          ]
+        },
+        "includeOtherFields": true
+      }
+    },
+    {
+      "id": "7c68b9e3-0dad-40c6-84cc-20e94e449082",
+      "name": "Prepare Source Work",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2060, 180],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const output = [];\nfor (const item of $input.all()) {\n  const response = item.json;\n  const context = response.context;\n  const data = response.body?.data;\n  const base = { source: context.source, runId: context.runId, startedAt: context.startedAt };\n  if (response.statusCode !== 200 || response.body?.success !== true) {\n    output.push({ json: { ...base, kind: 'fetch_failed', fetch: { discoveredCount: 0, returnedCount: 0, skippedCount: 0, httpStatus: response.statusCode, errorCode: response.body?.error?.code ?? 'rss_fetch_failed', errorSummary: response.body?.error?.message ?? 'RSS fetch failed.' } } });\n    continue;\n  }\n  const fetch = { discoveredCount: data.discoveredCount ?? 0, returnedCount: data.returnedCount ?? 0, skippedCount: data.skippedCount ?? 0, httpStatus: data.httpStatus, etag: data.etag, lastModified: data.lastModified };\n  if (data.notModified) { output.push({ json: { ...base, kind: 'not_modified', fetch } }); continue; }\n  const entries = Array.isArray(data.entries) ? data.entries : [];\n  if (entries.length === 0) { output.push({ json: { ...base, kind: 'no_entries', fetch } }); continue; }\n  for (const entry of entries) output.push({ json: { ...base, kind: 'entry', fetch, entry } });\n}\nreturn output;"
+      }
+    },
+    {
+      "id": "2c4eefbd-5731-41d2-897e-d68657cfb311",
+      "name": "Eligible Entry?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [2310, 180],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.kind }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "rightValue": "entry"
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "dd6565b2-285b-4369-9640-d3ab7cf76269",
+      "name": "Build Topic Intake Payload",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2550, 40],
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "intake-payload",
+              "name": "intakePayload",
+              "type": "object",
+              "value": "={{ { siteId: $json.source.siteId, title: $json.entry.title, description: $json.entry.description || undefined, externalId: $json.entry.stableId, idempotencyKey: 'rss:' + $json.source.id + ':' + $json.entry.stableId, metadata: { collector: 'rss', feedUrl: $json.source.feedUrl, publishedAt: $json.entry.publishedAt }, source: { sourceConfigId: $json.source.id, evidenceType: 'source', sourceUrl: $json.entry.url, sourceTitle: $json.entry.title, excerpt: $json.entry.excerpt || undefined, collectedAt: $now.toISO(), metadata: { feedEntryId: $json.entry.feedEntryId, author: $json.entry.author, publishedAt: $json.entry.publishedAt, updatedAt: $json.entry.updatedAt } } } }}"
+            }
+          ]
+        },
+        "includeOtherFields": true
+      }
+    },
+    {
+      "id": "3e9f4763-cb6b-4f2d-a4ee-e9acf813df64",
+      "name": "Submit Topic Intake",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [2790, 40],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AI_PUBLISHING_OS_BASE_URL + '/api/internal/topic-intake' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.intakePayload }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 20000
+        }
+      }
+    },
+    {
+      "id": "e6e2e49b-beca-416e-a514-b83d730ac45a",
+      "name": "Temporary Intake Failure?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [3030, 40],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.statusCode }}",
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              },
+              "rightValue": 429
+            },
+            {
+              "leftValue": "={{ $json.statusCode }}",
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              },
+              "rightValue": 502
+            },
+            {
+              "leftValue": "={{ $json.statusCode }}",
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              },
+              "rightValue": 503
+            },
+            {
+              "leftValue": "={{ $json.statusCode }}",
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              },
+              "rightValue": 504
+            }
+          ],
+          "combinator": "or"
+        }
+      }
+    },
+    {
+      "id": "80e86b01-fb09-4d74-8081-fae9023952d3",
+      "name": "Retry Delay",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [3260, -80],
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 2,
+        "unit": "seconds"
+      },
+      "webhookId": "7fb9dff3-5dab-435f-9de6-432b72f5907c"
+    },
+    {
+      "id": "cc7adf1f-2eda-40ea-b3da-1fec811bc0f6",
+      "name": "Retry Temporary Intake",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [3480, -80],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AI_PUBLISHING_OS_BASE_URL + '/api/internal/topic-intake' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ $('Build Topic Intake Payload').item.json.intakePayload }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 20000
+        }
+      }
+    },
+    {
+      "id": "9c60ee30-6104-470d-af0a-93f6cd7d6144",
+      "name": "Merge Intake Attempts",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [3720, 40],
+      "parameters": {
+        "mode": "append",
+        "numberInputs": 2
+      }
+    },
+    {
+      "id": "f93dbfaf-2a6c-4488-aac5-b3ca655cae13",
+      "name": "Normalize Source Outcome",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2550, 300],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "return { json: { source: $json.source, runId: $json.runId, startedAt: $json.startedAt, fetch: $json.fetch, kind: $json.kind } };"
+      }
+    },
+    {
+      "id": "ef16de76-c162-48ad-b24a-cc71e30b4707",
+      "name": "Merge Source Outcomes",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [4400, 180],
+      "parameters": {
+        "mode": "append",
+        "numberInputs": 2
+      }
+    },
+    {
+      "id": "d1b97572-bea0-4c5d-8f84-4baded168dc5",
+      "name": "Report Unrecorded Start Failure",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 440],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "return { json: { unrecorded: true, sourceId: $json.source.id, sourceName: $json.source.name, status: 'start_failed', error: $json.startError?.message ?? 'Collection start could not be recorded.' } };"
+      }
+    },
+    {
+      "id": "81153c1a-e9aa-48dd-a0dd-9cbc6d1fa4d5",
+      "name": "Merge Completed Sources",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [5120, 300],
+      "parameters": {
+        "mode": "append",
+        "numberInputs": 2
+      }
+    },
+    {
+      "id": "6621770f-22c5-4852-b5b8-eac5c743e9cc",
+      "name": "Every 6 Hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [0, 420],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "678cb5d4-517f-4860-bffd-885a833364e9",
+      "name": "Attach Intake Context",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [3940, 40],
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "intake-context",
+              "name": "work",
+              "type": "object",
+              "value": "={{ $('Build Topic Intake Payload').item.json }}"
+            }
+          ]
+        },
+        "includeOtherFields": true
+      }
+    },
+    {
+      "id": "462868f7-236e-4c1a-a025-471d4da91649",
+      "name": "Normalize Intake Outcome",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [4160, 40],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "const work = $json.work;\nconst success = [200, 201].includes($json.statusCode) && $json.body?.success === true;\nreturn { json: { source: work.source, runId: work.runId, startedAt: work.startedAt, fetch: work.fetch, kind: 'intake_result', intakeSuccess: success, matched: success && $json.body.data?.matchedExistingTopic === true, errorSummary: success ? null : ($json.body?.error?.message ?? 'Topic Intake failed.'), intakeStatus: $json.statusCode } };"
+      }
+    },
+    {
+      "id": "440d3b37-68c9-41f6-b092-3bb016acfd85",
+      "name": "Aggregate Collection Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [4640, 180],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const groups = new Map();\nfor (const { json } of $input.all()) {\n  const id = json.source.id;\n  if (!groups.has(id)) groups.set(id, { source: json.source, runId: json.runId, startedAt: json.startedAt, fetch: json.fetch, acceptedCount: 0, matchedCount: 0, submittedCount: 0, failedCount: 0, kinds: new Set(), errorSummary: null });\n  const group = groups.get(id);\n  group.kinds.add(json.kind);\n  if (json.kind === 'intake_result') { group.submittedCount += 1; if (json.intakeSuccess) { group.acceptedCount += 1; if (json.matched) group.matchedCount += 1; } else { group.failedCount += 1; group.errorSummary ??= json.errorSummary; } }\n}\nreturn [...groups.values()].map((group) => {\n  let status = 'succeeded'; let errorCode; let errorSummary = group.errorSummary;\n  if (group.kinds.has('fetch_failed')) { status = 'failed'; errorCode = group.fetch.errorCode; errorSummary = group.fetch.errorSummary; }\n  else if (group.kinds.has('not_modified')) status = 'not_modified';\n  else if (group.failedCount > 0 && group.acceptedCount > 0) { status = 'partial'; errorCode = 'topic_intake_partial_failure'; }\n  else if (group.failedCount > 0) { status = 'failed'; errorCode = 'topic_intake_failed'; }\n  const result = { runId: group.runId, status, discoveredCount: group.fetch.discoveredCount ?? 0, returnedCount: group.fetch.returnedCount ?? 0, submittedCount: group.submittedCount, acceptedCount: group.acceptedCount, matchedCount: group.matchedCount, skippedCount: group.fetch.skippedCount ?? 0, failedCount: group.failedCount, durationMs: Math.max(0, Date.now() - Date.parse(group.startedAt)), httpStatus: group.fetch.httpStatus, ...(group.fetch.etag ? { etag: group.fetch.etag } : {}), ...(group.fetch.lastModified ? { lastModified: group.fetch.lastModified } : {}), ...(errorCode ? { errorCode } : {}), ...(errorSummary ? { errorSummary: String(errorSummary).slice(0, 500) } : {}) };\n  return { json: { source: group.source, collectionResult: result } };\n});"
+      }
+    },
+    {
+      "id": "6fc3b6dc-a9cf-45c4-ad69-bac2545a0eba",
+      "name": "Record Final Collection Result",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [4880, 180],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AI_PUBLISHING_OS_BASE_URL + '/api/internal/sources/' + $json.source.id + '/collection-result' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.collectionResult }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 15000
+        }
+      }
+    },
+    {
+      "id": "2956840a-49cc-4ec3-bb94-1bcfc5a5e799",
+      "name": "Show Run Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [5360, 300],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const items = $input.all().map((item) => item.json);\nreturn [{ json: { completedAt: new Date().toISOString(), sourceCount: items.length, recordedCount: items.filter((item) => item.body?.success === true).length, unrecordedCount: items.filter((item) => item.unrecorded).length, sources: items.map((item) => item.unrecorded ? item : item.body?.data ?? { status: 'result_recording_failed', httpStatus: item.statusCode }) } }];"
+      },
+      "executeOnce": true
+    },
+    {
+      "id": "0253bd10-f5c2-4086-9885-6a7507948b49",
+      "name": "Sticky Note c2a619f2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-50, 150],
+      "parameters": {
+        "content": "## Setup\nSet `AI_PUBLISHING_OS_BASE_URL` in n8n. Configure the **AI Publishing OS Internal API** HTTP Header Auth credential with header `X-API-Key`. The workflow export contains no secret.",
+        "color": 5,
+        "width": 560,
+        "height": 420
+      }
+    },
+    {
+      "id": "d0d1be95-2968-45f0-9fc9-9c34a8531ccd",
+      "name": "Sticky Note c4b9db4f",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [1510, 130],
+      "parameters": {
+        "content": "## Security boundary\nThe application fetch endpoint owns URL/DNS/redirect validation, SSRF defenses, timeouts, response limits, XML safety, caching, parsing, and sanitization. n8n never sends its credential to a feed host.",
+        "color": 3,
+        "width": 800,
+        "height": 200
+      }
+    },
+    {
+      "id": "02a7ec8f-0366-4d73-b2eb-ade790d6e16e",
+      "name": "Sticky Note 38450d5b",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [2980, -130],
+      "parameters": {
+        "content": "## Failure behavior\nFetch and intake errors become counted outcomes. Temporary Topic Intake failures receive one delayed retry. One entry or source failure does not stop unrelated items.",
+        "color": 6,
+        "width": 2150,
+        "height": 460
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Load Active RSS Sources",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Active RSS Sources": {
+      "main": [
+        [
+          {
+            "node": "Split Active Sources",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Active Sources": {
+      "main": [
+        [
+          {
+            "node": "Record Collection Start",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record Collection Start": {
+      "main": [
+        [
+          {
+            "node": "Attach Run Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Attach Run Context": {
+      "main": [
+        [
+          {
+            "node": "Collection Start Recorded?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collection Start Recorded?": {
+      "main": [
+        [
+          {
+            "node": "Fetch Parsed Feed",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Report Unrecorded Start Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Parsed Feed": {
+      "main": [
+        [
+          {
+            "node": "Attach Fetch Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Attach Fetch Context": {
+      "main": [
+        [
+          {
+            "node": "Prepare Source Work",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Source Work": {
+      "main": [
+        [
+          {
+            "node": "Eligible Entry?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eligible Entry?": {
+      "main": [
+        [
+          {
+            "node": "Build Topic Intake Payload",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Normalize Source Outcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Topic Intake Payload": {
+      "main": [
+        [
+          {
+            "node": "Submit Topic Intake",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Submit Topic Intake": {
+      "main": [
+        [
+          {
+            "node": "Temporary Intake Failure?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Temporary Intake Failure?": {
+      "main": [
+        [
+          {
+            "node": "Retry Delay",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge Intake Attempts",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Retry Delay": {
+      "main": [
+        [
+          {
+            "node": "Retry Temporary Intake",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry Temporary Intake": {
+      "main": [
+        [
+          {
+            "node": "Merge Intake Attempts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Intake Attempts": {
+      "main": [
+        [
+          {
+            "node": "Attach Intake Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Source Outcome": {
+      "main": [
+        [
+          {
+            "node": "Merge Source Outcomes",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Source Outcomes": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Collection Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Report Unrecorded Start Failure": {
+      "main": [
+        [
+          {
+            "node": "Merge Completed Sources",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Completed Sources": {
+      "main": [
+        [
+          {
+            "node": "Show Run Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Every 6 Hours": {
+      "main": [
+        [
+          {
+            "node": "Load Active RSS Sources",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Attach Intake Context": {
+      "main": [
+        [
+          {
+            "node": "Normalize Intake Outcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Intake Outcome": {
+      "main": [
+        [
+          {
+            "node": "Merge Source Outcomes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Collection Results": {
+      "main": [
+        [
+          {
+            "node": "Record Final Collection Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record Final Collection Result": {
+      "main": [
+        [
+          {
+            "node": "Merge Completed Sources",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true
+  },
+  "versionId": "0161fd31-11cf-4c97-b792-90686d39a540",
+  "meta": {
+    "aiBuilderAssisted": true,
+    "builderVariant": "mcp"
+  }
+}

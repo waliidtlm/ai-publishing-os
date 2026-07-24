@@ -188,6 +188,7 @@ button:disabled {
   padding: 28px;
 }
 
+.rss-section,
 .topic-section {
   margin-top: 24px;
 }
@@ -216,6 +217,12 @@ button:disabled {
   gap: 14px;
 }
 
+.source-list {
+  display: grid;
+  gap: 14px;
+}
+
+.source-card,
 .topic-card {
   padding: 18px;
   border: 1px solid var(--border);
@@ -223,9 +230,56 @@ button:disabled {
   background: #fbfcfe;
 }
 
+.source-card h3,
 .topic-card h3 {
   margin: 0 0 6px;
   font-size: 1.05rem;
+}
+
+.source-url {
+  display: block;
+  margin-top: 12px;
+  overflow-wrap: anywhere;
+  color: var(--accent);
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+.source-metrics {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 16px 0 0;
+}
+
+.source-metrics div {
+  min-width: 0;
+}
+
+.source-metrics dt {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.source-metrics dd {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+  font-size: 0.86rem;
+}
+
+.source-error {
+  margin: 14px 0 0;
+  color: var(--danger);
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+
+.count-badge-muted {
+  background: #eef0f3;
+  color: var(--muted);
 }
 
 .topic-meta,
@@ -272,5 +326,9 @@ button:disabled {
   .section-heading,
   .topic-card-heading {
     flex-direction: column;
+  }
+
+  .source-metrics {
+    grid-template-columns: 1fr;
   }
 }

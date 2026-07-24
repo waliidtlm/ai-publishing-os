@@ -14,6 +14,7 @@
     "@ai-publishing-os/database": "workspace:*",
     "@ai-publishing-os/schemas": "workspace:*",
     "@ai-publishing-os/shared": "workspace:*",
+    "fast-xml-parser": "5.3.6",
     "next": "16.2.11",
     "next-auth": "4.24.15",
     "react": "19.2.8",

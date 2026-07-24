@@ -13,6 +13,7 @@
     "test": "pnpm test:unit",
     "test:unit": "pnpm --filter @ai-publishing-os/dashboard test",
     "test:integration": "tsx scripts/run-integration-tests.ts",
+    "test:smoke:rss": "tsx scripts/smoke-rss-collector.ts",
     "test:smoke:topic-intake": "tsx scripts/smoke-topic-intake.ts",
     "test:e2e:install": "playwright install chromium",
     "test:e2e": "playwright test",

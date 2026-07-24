@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>AI Publishing OS fixture feed</title>
+    <link>https://fixture.example/</link>
+    <description>Local RSS 2.0 test fixture.</description>
+    <item>
+      <guid isPermaLink="false">fixture-normal-001</guid>
+      <title>Practical RSS collection for publishing teams</title>
+      <link>https://fixture.example/articles/rss-collection</link>
+      <description>A normal feed entry for the Phase 2 smoke test.</description>
+      <author>editor@fixture.example</author>
+      <pubDate>Fri, 24 Jul 2026 10:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <guid isPermaLink="false">fixture-duplicate-title-002</guid>
+      <title>Practical RSS collection for publishing teams</title>
+      <link>https://fixture.example/articles/rss-collection-follow-up</link>
+      <description>A duplicate topic-title candidate with different evidence.</description>
+      <pubDate>Fri, 24 Jul 2026 09:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <guid isPermaLink="false">fixture-html-003</guid>
+      <title>Sanitizing untrusted feed summaries</title>
+      <link>https://fixture.example/articles/feed-sanitization</link>
+      <description><![CDATA[
+        <p>Keep the useful <strong>summary</strong>.</p>
+        <script>window.evil = true;</script>
+        <form action="https://attacker.invalid"><input name="secret"></form>
+      ]]></description>
+      <pubDate>Fri, 24 Jul 2026 08:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <guid isPermaLink="false">fixture-invalid-date-004</guid>
+      <title>Handling invalid publication dates</title>
+      <link>https://fixture.example/articles/invalid-dates</link>
+      <description>An invalid date must be omitted without rejecting the entry.</description>
+      <pubDate>not-a-real-date</pubDate>
+    </item>
+    <item>
+      <guid isPermaLink="false">fixture-missing-title-005</guid>
+      <link>https://fixture.example/articles/missing-title</link>
+      <description>This entry must be skipped because the title is missing.</description>
+    </item>
+    <item>
+      <guid isPermaLink="false">fixture-missing-url-006</guid>
+      <title>This entry has no canonical URL</title>
+      <description>This entry must be skipped because the URL is missing.</description>
+    </item>
+  </channel>
+</rss>

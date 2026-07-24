@@ -1,7 +1,6 @@
 # API
 
-Phase 0 exposes health endpoints only. All responses use JSON and disable
-caching.
+All responses use JSON and disable caching.
 
 ## Application liveness
 
@@ -57,3 +56,12 @@ redaction.
 `POST /api/internal/topic-intake` is the authenticated, idempotent topic
 candidate intake endpoint. See [Topic intake](topic-intake.md) for the request,
 response, n8n, rate-limit, and security contract.
+
+## Internal RSS collector
+
+- `GET /api/internal/sources/rss`
+- `POST /api/internal/sources/:sourceId/fetch`
+- `POST /api/internal/sources/:sourceId/collection-result`
+
+See [RSS collector](rss-collector.md) for authentication, request/response,
+security, caching, limits, workflow, and testing details.

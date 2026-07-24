@@ -4,6 +4,7 @@ import {
   databaseEnvironmentSchema,
   internalApiEnvironmentSchema,
   loggingEnvironmentSchema,
+  rssCollectorEnvironmentSchema,
 } from "@ai-publishing-os/schemas";
 
 export function getDatabaseEnvironment() {
@@ -16,4 +17,8 @@ export function getInternalApiEnvironment() {
 
 export function getLoggingEnvironment() {
   return loggingEnvironmentSchema.parse(process.env);
+}
+
+export function getRssCollectorEnvironment() {
+  return rssCollectorEnvironmentSchema.parse(process.env);
 }

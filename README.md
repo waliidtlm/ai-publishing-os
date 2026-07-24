@@ -2,11 +2,11 @@
 
 Self-hosted publishing operations application. The repository provides the
 Phase 0 foundation plus a secured, idempotent internal topic-intake pipeline,
-minimal dashboard visibility, PostgreSQL-backed rate limiting, and an n8n
-smoke-test client.
+an application-secured RSS/Atom source adapter, collection visibility,
+PostgreSQL-backed rate limiting, and importable n8n workflows.
 
-AI generation, crawling, WordPress publishing, Search Console integrations, and
-n8n workflows are intentionally not implemented.
+AI generation, webpage crawling, WordPress publishing, Search Console, Reddit,
+and GitHub collectors are intentionally not implemented.
 
 ## Selected versions
 
@@ -158,5 +158,6 @@ Until OAuth is configured, production mode has no login provider.
 - [Security](docs/security.md)
 - [API](docs/api.md)
 - [Topic intake](docs/topic-intake.md)
+- [RSS collector](docs/rss-collector.md)
 - [Monorepo decision](docs/decisions/001-monorepo.md)
 - [PostgreSQL source-of-truth decision](docs/decisions/002-postgres-source-of-truth.md)

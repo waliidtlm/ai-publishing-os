@@ -35,6 +35,29 @@ export const loggingEnvironmentSchema = z.object({
     .default("info"),
 });
 
+export const rssCollectorEnvironmentSchema = z.object({
+  RSS_MAX_ENTRIES_PER_SOURCE: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(100)
+    .default(20),
+  RSS_MAX_REDIRECTS: z.coerce.number().int().min(0).max(10).default(3),
+  RSS_MAX_RESPONSE_BYTES: z.coerce
+    .number()
+    .int()
+    .min(16_384)
+    .max(10_485_760)
+    .default(1_048_576),
+  RSS_MAX_SOURCES_PER_RUN: z.coerce.number().int().min(1).max(100).default(25),
+  RSS_REQUEST_TIMEOUT_MS: z.coerce
+    .number()
+    .int()
+    .min(1_000)
+    .max(60_000)
+    .default(10_000),
+});
+
 export const authEnvironmentSchema = z.object({
   NEXTAUTH_SECRET: z.string().min(32),
   NEXTAUTH_URL: z.url().optional(),
@@ -56,4 +79,7 @@ export type DevelopmentAuthEnvironment = z.infer<
   typeof developmentAuthEnvironmentSchema
 >;
 export type LoggingEnvironment = z.infer<typeof loggingEnvironmentSchema>;
+export type RssCollectorEnvironment = z.infer<
+  typeof rssCollectorEnvironmentSchema
+>;
 export type ServerEnvironment = z.infer<typeof serverEnvironmentSchema>;

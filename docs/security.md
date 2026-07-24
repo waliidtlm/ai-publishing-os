@@ -53,6 +53,15 @@ cookies, passwords, secrets, tokens, and API keys.
 Application responses must not expose stack traces, database URLs, keys, or
 provider configuration.
 
+## RSS outbound requests
+
+Configured feed URLs are untrusted. The application restricts protocols,
+resolves and validates destinations, revalidates redirects, blocks private and
+metadata ranges, enforces timeout/redirect/response limits, and rejects XML DTD
+or entity declarations. See [RSS collector](rss-collector.md) for exact
+controls and the residual DNS-rebinding risk. Production deployments should
+also enforce private-network egress denial outside the application process.
+
 ## Database
 
 The local Compose database publishes host port `5433` for development tooling

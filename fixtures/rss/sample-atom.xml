@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>AI Publishing OS Atom fixture</title>
+  <id>urn:fixture:atom-feed</id>
+  <updated>2026-07-24T10:00:00Z</updated>
+  <entry>
+    <title>Collecting Atom entries safely</title>
+    <id>urn:fixture:atom:001</id>
+    <link rel="alternate" href="https://fixture.example/atom/safe-collection"/>
+    <updated>2026-07-24T10:00:00Z</updated>
+    <published>2026-07-24T09:30:00Z</published>
+    <author><name>Fixture Author</name></author>
+    <summary type="html">&lt;p&gt;A safe &lt;strong&gt;Atom&lt;/strong&gt; summary.&lt;/p&gt;</summary>
+  </entry>
+  <entry>
+    <title>Atom entry with an invalid date</title>
+    <id>urn:fixture:atom:002</id>
+    <link href="https://fixture.example/atom/invalid-date"/>
+    <published>invalid</published>
+    <summary>Date errors are isolated to the optional field.</summary>
+  </entry>
+</feed>

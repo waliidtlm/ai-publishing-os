@@ -2,10 +2,11 @@
 
 ## Current scope
 
-Phase 0 establishes the runtime and repository boundaries. Phase 1 adds one
-secured topic-intake API and a smoke-test n8n client. It does not implement
-content collection, AI generation, WordPress publishing, analytics, or an n8n
-collector.
+Phase 0 establishes the runtime and repository boundaries. Phase 1 adds the
+secured Topic Intake API. Phase 2 adds an n8n-orchestrated RSS/Atom source
+adapter whose security-sensitive fetch and parser execute inside the
+application. It does not implement webpage collection, AI generation,
+WordPress publishing, or analytics.
 
 ## Components
 

@@ -90,6 +90,16 @@ enum EvidenceType {
   @@map("evidence_type")
 }
 
+enum RssCollectionStatus {
+  STARTED      @map("started")
+  SUCCEEDED    @map("succeeded")
+  PARTIAL      @map("partial")
+  FAILED       @map("failed")
+  NOT_MODIFIED @map("not_modified")
+
+  @@map("rss_collection_status")
+}
+
 model User {
   id        String     @id @default(cuid())
   name      String?
@@ -119,26 +129,62 @@ model Site {
 }
 
 model SourceConfig {
-  id                  String              @id @default(cuid())
-  siteId              String              @map("site_id")
-  name                String
-  sourceType          SourceType          @map("source_type")
-  baseUrl             String?             @map("base_url")
-  collectionMethod    CollectionMethod    @map("collection_method")
-  trustLevel          TrustLevel          @default(MEDIUM) @map("trust_level")
-  collectionFrequency CollectionFrequency @default(MANUAL) @map("collection_frequency")
-  isActive            Boolean             @default(true) @map("is_active")
-  lastCollectedAt     DateTime?           @map("last_collected_at")
-  metadata            Json?
-  createdAt           DateTime            @default(now()) @map("created_at")
-  updatedAt           DateTime            @updatedAt @map("updated_at")
-  site                Site                @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  evidence            TopicEvidence[]
+  id                        String              @id @default(cuid())
+  siteId                    String              @map("site_id")
+  name                      String
+  sourceType                SourceType          @map("source_type")
+  baseUrl                   String?             @map("base_url")
+  collectionMethod          CollectionMethod    @map("collection_method")
+  trustLevel                TrustLevel          @default(MEDIUM) @map("trust_level")
+  collectionFrequency       CollectionFrequency @default(MANUAL) @map("collection_frequency")
+  isActive                  Boolean             @default(true) @map("is_active")
+  collectionLimit           Int?                @map("collection_limit")
+  lastCollectedAt           DateTime?           @map("last_collected_at")
+  lastSuccessfulCollectedAt DateTime?           @map("last_successful_collected_at")
+  lastErrorAt               DateTime?           @map("last_error_at")
+  lastErrorSummary          String?              @map("last_error_summary")
+  httpEtag                  String?              @map("http_etag")
+  httpLastModified          String?              @map("http_last_modified")
+  metadata                  Json?
+  createdAt                 DateTime             @default(now()) @map("created_at")
+  updatedAt                 DateTime             @updatedAt @map("updated_at")
+  site                      Site                 @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  evidence                  TopicEvidence[]
+  rssCollectionRuns         RssCollectionRun[]
 
   @@unique([siteId, name])
   @@index([siteId, isActive])
   @@index([isActive, lastCollectedAt])
   @@map("source_configs")
+}
+
+model RssCollectionRun {
+  id                  String              @id @default(cuid())
+  sourceConfigId      String              @map("source_config_id")
+  workflowExecutionId String?             @map("workflow_execution_id")
+  status              RssCollectionStatus
+  startedAt           DateTime            @map("started_at")
+  completedAt         DateTime?           @map("completed_at")
+  discoveredCount     Int                 @default(0) @map("discovered_count")
+  returnedCount       Int                 @default(0) @map("returned_count")
+  submittedCount      Int                 @default(0) @map("submitted_count")
+  acceptedCount       Int                 @default(0) @map("accepted_count")
+  matchedCount        Int                 @default(0) @map("matched_count")
+  skippedCount        Int                 @default(0) @map("skipped_count")
+  failedCount         Int                 @default(0) @map("failed_count")
+  httpStatus          Int?                @map("http_status")
+  etag                String?
+  lastModified        String?             @map("last_modified")
+  errorCode           String?             @map("error_code")
+  errorSummary        String?             @map("error_summary")
+  durationMs          Int?                @map("duration_ms")
+  createdAt           DateTime            @default(now()) @map("created_at")
+  updatedAt           DateTime            @updatedAt @map("updated_at")
+  sourceConfig        SourceConfig        @relation(fields: [sourceConfigId], references: [id], onDelete: Cascade)
+
+  @@index([sourceConfigId, startedAt])
+  @@index([status, startedAt])
+  @@map("rss_collection_runs")
 }
 
 model Topic {
