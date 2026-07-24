@@ -15,6 +15,18 @@ export const databaseEnvironmentSchema = z.object({
 
 export const internalApiEnvironmentSchema = z.object({
   INTERNAL_API_KEY: z.string().min(32).max(512),
+  INTERNAL_API_RATE_LIMIT_MAX: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(10_000)
+    .default(60),
+  INTERNAL_API_RATE_LIMIT_WINDOW_SECONDS: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(3_600)
+    .default(60),
 });
 
 export const loggingEnvironmentSchema = z.object({

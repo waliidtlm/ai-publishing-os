@@ -39,6 +39,8 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-publishing_os}:${POSTGRES_PASSWORD:-local-database-only-2026}@database:5432/${POSTGRES_DB:-publishing_os}?schema=public
       TEST_DATABASE_URL: postgresql://${POSTGRES_USER:-publishing_os}:${POSTGRES_PASSWORD:-local-database-only-2026}@database:5432/publishing_os_test?schema=public
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-compose-internal-api-key-change-before-sharing}
+      INTERNAL_API_RATE_LIMIT_MAX: ${INTERNAL_API_RATE_LIMIT_MAX:-60}
+      INTERNAL_API_RATE_LIMIT_WINDOW_SECONDS: ${INTERNAL_API_RATE_LIMIT_WINDOW_SECONDS:-60}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       DEV_AUTH_EMAIL: ${DEV_AUTH_EMAIL:-developer@example.com}
       DEV_AUTH_PASSWORD: ${DEV_AUTH_PASSWORD:-local-development-only-2026}

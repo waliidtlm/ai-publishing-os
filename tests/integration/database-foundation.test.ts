@@ -36,6 +36,8 @@ databaseSuite("PostgreSQL foundation", () => {
       FROM information_schema.tables
       WHERE table_schema = 'public'
         AND table_name IN (
+          'intake_idempotency_records',
+          'internal_api_rate_limit_buckets',
           'users',
           'sites',
           'source_configs',
@@ -49,6 +51,8 @@ databaseSuite("PostgreSQL foundation", () => {
 
     expect(rows?.map((row) => row.table_name)).toEqual([
       "audit_logs",
+      "intake_idempotency_records",
+      "internal_api_rate_limit_buckets",
       "sites",
       "source_configs",
       "topic_evidence",

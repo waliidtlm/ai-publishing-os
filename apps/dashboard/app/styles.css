@@ -188,6 +188,77 @@ button:disabled {
   padding: 28px;
 }
 
+.topic-section {
+  margin-top: 24px;
+}
+
+.section-heading,
+.topic-card-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.count-badge {
+  display: inline-flex;
+  flex: 0 0 auto;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #eef4ff;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.topic-list {
+  display: grid;
+  gap: 14px;
+}
+
+.topic-card {
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fbfcfe;
+}
+
+.topic-card h3 {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+}
+
+.topic-meta,
+.evidence-list span {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.topic-empty {
+  margin-bottom: 0;
+}
+
+.evidence-list {
+  display: grid;
+  gap: 9px;
+  margin: 14px 0 0;
+  padding-left: 20px;
+}
+
+.evidence-list li {
+  padding-left: 4px;
+}
+
+.evidence-list a,
+.evidence-list span {
+  display: block;
+}
+
+.evidence-list a {
+  color: var(--accent);
+  font-weight: 650;
+}
+
 @media (max-width: 600px) {
   .auth-card {
     padding: 26px 22px;
@@ -195,6 +266,11 @@ button:disabled {
 
   .dashboard-header {
     align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .section-heading,
+  .topic-card-heading {
     flex-direction: column;
   }
 }

@@ -52,7 +52,8 @@ The failure response deliberately omits connection strings and internal error
 details. Structured server logs retain the diagnostic error with configured
 redaction.
 
-## Future internal API
+## Internal topic intake
 
-No n8n or internal mutation endpoint exists in Phase 0. The reserved security
-contract is documented in `docs/security.md`.
+`POST /api/internal/topic-intake` is the authenticated, idempotent topic
+candidate intake endpoint. See [Topic intake](topic-intake.md) for the request,
+response, n8n, rate-limit, and security contract.

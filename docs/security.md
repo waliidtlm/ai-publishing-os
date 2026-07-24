@@ -30,9 +30,8 @@ a shared or production deployment.
 
 ## Internal API
 
-Phase 0 validates `INTERNAL_API_KEY` and provides a server-only,
-timing-safe request authenticator, but does not expose an internal mutation
-endpoint. Future internal endpoints must:
+The topic-intake endpoint reuses the Phase 0 server-only, timing-safe
+authenticator. Internal endpoints must:
 
 - read the key only in server code;
 - use a timing-safe comparison;
@@ -40,9 +39,11 @@ endpoint. Future internal endpoints must:
 - apply rate limiting at the documented boundary;
 - never log the key or authorization header.
 
-`InternalApiRateLimiter` is the required boundary. Its guard deliberately throws
-when no implementation is configured, preventing a future mutation endpoint
-from silently shipping without rate limiting.
+`InternalApiRateLimiter` remains the required boundary. Topic intake uses a
+PostgreSQL fixed-window implementation shared by every dashboard instance.
+The current identity scope represents the single configured internal API key;
+separate collector identities are required before granting different
+permissions or independent revocation.
 
 ## Logging
 

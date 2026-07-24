@@ -15,6 +15,8 @@ driver adapter.
 - `TopicEvidence`: source evidence with a site/topic idempotency constraint.
 - `TopicScore`: immutable score history for a topic.
 - `AuditLog`: mutation history with optional user attribution.
+- `IntakeIdempotencyRecord`: site-scoped request hash and stored intake result.
+- `InternalApiRateLimitBucket`: shared fixed-window internal API counters.
 
 The database stores operational fields in typed columns. JSON is reserved for
 optional metadata and before/after audit snapshots.
@@ -26,6 +28,9 @@ optional metadata and before/after audit snapshots.
 - Topic normalized title is unique within a site.
 - Source configuration name is unique within a site.
 - Topic evidence is unique by topic, source URL, and evidence type.
+- New intake evidence also has a topic-scoped deterministic fingerprint.
+- Intake idempotency keys are unique within their site/integration scope.
+- Rate-limit buckets are unique by scope, identifier, and time window.
 - Site-owned records cascade on site/topic deletion.
 - Audit-log users and evidence source configurations become null when the
   referenced optional record is deleted.

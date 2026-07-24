@@ -147,6 +147,8 @@ model Topic {
   title           String
   normalizedTitle String          @map("normalized_title")
   description     String?
+  intakeOrigin    String?         @map("intake_origin")
+  intakeMetadata  Json?           @map("intake_metadata")
   status          TopicStatus     @default(CANDIDATE)
   priority        TopicPriority   @default(MEDIUM)
   totalScore      Int             @default(0) @map("total_score")
@@ -163,23 +165,27 @@ model Topic {
 }
 
 model TopicEvidence {
-  id             String        @id @default(cuid())
-  topicId        String        @map("topic_id")
-  sourceConfigId String?       @map("source_config_id")
-  evidenceType   EvidenceType  @map("evidence_type")
-  sourceUrl      String        @map("source_url")
-  sourceTitle    String?       @map("source_title")
-  excerpt        String?
-  collectedAt    DateTime      @map("collected_at")
-  metadata       Json?
-  createdAt      DateTime      @default(now()) @map("created_at")
-  updatedAt      DateTime      @updatedAt @map("updated_at")
-  topic          Topic         @relation(fields: [topicId], references: [id], onDelete: Cascade)
-  sourceConfig   SourceConfig? @relation(fields: [sourceConfigId], references: [id], onDelete: SetNull)
+  id                  String        @id @default(cuid())
+  topicId             String        @map("topic_id")
+  sourceConfigId      String?       @map("source_config_id")
+  evidenceType        EvidenceType  @map("evidence_type")
+  sourceUrl           String        @map("source_url")
+  sourceTitle         String?       @map("source_title")
+  excerpt             String?
+  externalId          String?       @map("external_id")
+  evidenceFingerprint String?       @map("evidence_fingerprint")
+  collectedAt         DateTime      @map("collected_at")
+  metadata            Json?
+  createdAt           DateTime      @default(now()) @map("created_at")
+  updatedAt           DateTime      @updatedAt @map("updated_at")
+  topic               Topic         @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  sourceConfig        SourceConfig? @relation(fields: [sourceConfigId], references: [id], onDelete: SetNull)
 
   @@unique([topicId, sourceUrl, evidenceType])
+  @@unique([topicId, evidenceFingerprint])
   @@index([topicId, collectedAt])
   @@index([sourceConfigId])
+  @@index([sourceConfigId, externalId])
   @@map("topic_evidence")
 }
 
@@ -216,4 +222,35 @@ model AuditLog {
   @@index([entityType, entityId, createdAt])
   @@index([userId, createdAt])
   @@map("audit_logs")
+}
+
+model IntakeIdempotencyRecord {
+  id             String   @id @default(cuid())
+  scope          String
+  key            String
+  requestHash    String   @map("request_hash")
+  responseStatus Int?     @map("response_status")
+  responseBody   Json?    @map("response_body")
+  topicId        String?  @map("topic_id")
+  evidenceId     String?  @map("evidence_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@unique([scope, key])
+  @@index([createdAt])
+  @@map("intake_idempotency_records")
+}
+
+model InternalApiRateLimitBucket {
+  id             String   @id @default(cuid())
+  scope          String
+  identifierHash String   @map("identifier_hash")
+  windowStart    DateTime @map("window_start")
+  requestCount   Int      @default(1) @map("request_count")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@unique([scope, identifierHash, windowStart])
+  @@index([windowStart])
+  @@map("internal_api_rate_limit_buckets")
 }

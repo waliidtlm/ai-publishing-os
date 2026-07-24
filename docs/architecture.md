@@ -1,10 +1,11 @@
 # Architecture
 
-## Phase 0 scope
+## Current scope
 
-Phase 0 establishes the runtime and repository boundaries. It does not
-implement content collection, AI generation, WordPress publishing, analytics,
-or n8n workflows.
+Phase 0 establishes the runtime and repository boundaries. Phase 1 adds one
+secured topic-intake API and a smoke-test n8n client. It does not implement
+content collection, AI generation, WordPress publishing, analytics, or an n8n
+collector.
 
 ## Components
 
@@ -31,9 +32,10 @@ database, internal API, and logging environment validation.
 
 ### Shared
 
-`packages/shared` contains infrastructure-neutral shared code. Phase 0 provides
-a Pino JSON logger with credential, cookie, token, and authorization-header
-redaction.
+`packages/shared` contains infrastructure-neutral shared code. It provides a
+Pino JSON logger with credential, cookie, token, and authorization-header
+redaction plus deterministic topic normalization, canonical hashing, and
+evidence fingerprint utilities.
 
 ### Infrastructure
 

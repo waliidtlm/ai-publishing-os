@@ -1,0 +1,160 @@
+{
+  "name": "AI Publishing OS - Topic Intake Smoke Test",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "a6ab5c75-ec69-4fd1-9788-167c8724e62a",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "13458e86-b634-4df9-b5ea-197f0593789b",
+              "name": "siteId",
+              "type": "string",
+              "value": "REPLACE_WITH_SITE_ID"
+            },
+            {
+              "id": "a1cae5d8-5212-4166-8f44-87a54426b078",
+              "name": "title",
+              "type": "string",
+              "value": "How to prevent duplicate executions in n8n"
+            },
+            {
+              "id": "d59b7554-22ca-4c13-80b8-adbb8be583ef",
+              "name": "description",
+              "type": "string",
+              "value": "Smoke-test topic submitted manually from n8n"
+            },
+            {
+              "id": "650549fb-cf22-4b12-b22e-9fae1985fa22",
+              "name": "idempotencyKey",
+              "type": "string",
+              "value": "=n8n-smoke-{{$now.toMillis()}}"
+            },
+            {
+              "id": "6a5e4891-b18f-48c4-882c-44407204ecf4",
+              "name": "source",
+              "type": "object",
+              "value": "={{ { evidenceType: 'manual', sourceUrl: 'https://docs.n8n.io/', sourceTitle: 'n8n documentation', excerpt: 'Smoke-test evidence only.' } }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "55cc620e-7645-4b73-9d10-6d85b52e2bc1",
+      "name": "Set Sample Topic",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [240, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AI_PUBLISHING_OS_BASE_URL + '/api/internal/topic-intake' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.AI_PUBLISHING_OS_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify($json) }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "c504024e-46e7-47e9-b49a-d221bce2cd90",
+      "name": "Submit Topic Intake",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 0]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "01b2143c-df68-433b-834d-0fc538eeea1b",
+              "name": "statusCode",
+              "type": "number",
+              "value": "={{ $json.statusCode }}"
+            },
+            {
+              "id": "a73e56d0-4a43-4205-b5ed-25658973f819",
+              "name": "response",
+              "type": "object",
+              "value": "={{ $json.body }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4b4c5547-da3f-4d22-a514-47eabf7bcc3e",
+      "name": "Show Intake Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [760, 0]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Set Sample Topic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Sample Topic": {
+      "main": [
+        [
+          {
+            "node": "Submit Topic Intake",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Submit Topic Intake": {
+      "main": [
+        [
+          {
+            "node": "Show Intake Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "29dbcba7-fd4d-4a05-9dcc-d1e51b137cea",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}
