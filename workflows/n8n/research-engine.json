@@ -1,0 +1,370 @@
+{
+  "name": "AI Publishing OS - Research Engine",
+  "nodes": [
+    {
+      "id": "e1d4e6c1-c842-42a3-a7dd-565ef4e41962",
+      "name": "Manual Test Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 200],
+      "parameters": {}
+    },
+    {
+      "id": "39933c99-b90b-4bed-8956-2d1d11d83f47",
+      "name": "Configure Research Run",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [260, 300],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "topic-id",
+              "name": "topicId",
+              "value": "={{ $env.RESEARCH_TOPIC_ID }}",
+              "type": "string"
+            },
+            {
+              "id": "research-mode",
+              "name": "mode",
+              "value": "={{ $env.RESEARCH_MODE || \"deterministic\" }}",
+              "type": "string"
+            },
+            {
+              "id": "trigger-type",
+              "name": "triggerType",
+              "value": "n8n",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "972ca035-5615-4cb9-8135-8b3b3a626552",
+      "name": "Create Research Job",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [520, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AI_PUBLISHING_OS_BASE_URL + '/api/internal/topics/' + $json.topicId + '/research-jobs' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ { mode: $json.mode, triggerType: $json.triggerType, workflowExecutionReference: $execution.id } }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": false,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 15000
+        }
+      }
+    },
+    {
+      "id": "77aadee3-c6a0-4685-8fe7-35ac90f10953",
+      "name": "Split Selected Sources",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [780, 300],
+      "parameters": {
+        "fieldToSplitOut": "body.data.sources",
+        "include": "noOtherFields",
+        "options": {
+          "destinationFieldName": "source"
+        }
+      }
+    },
+    {
+      "id": "d97d0b60-f34c-45fb-855b-3df9581ebc9e",
+      "name": "Complete Research Job",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [1300, 180],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AI_PUBLISHING_OS_BASE_URL + '/api/internal/research-jobs/' + $('Create Research Job').first().json.body.data.job.id + '/complete' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ {} }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": false,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "executeOnce": true
+    },
+    {
+      "id": "770d7642-f243-4872-9da0-06db59b661dd",
+      "name": "Present Research Summary",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1560, 180],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "job-id",
+              "name": "researchJobId",
+              "value": "={{ $json.body.data.id }}",
+              "type": "string"
+            },
+            {
+              "id": "status",
+              "name": "status",
+              "value": "={{ $json.body.data.status }}",
+              "type": "string"
+            },
+            {
+              "id": "notes",
+              "name": "generatedNoteCount",
+              "value": "={{ $json.body.data.generatedNoteCount }}",
+              "type": "number"
+            },
+            {
+              "id": "successful",
+              "name": "successfulSourceCount",
+              "value": "={{ $json.body.data.successfulSourceCount }}",
+              "type": "number"
+            },
+            {
+              "id": "failed",
+              "name": "failedSourceCount",
+              "value": "={{ $json.body.data.failedSourceCount }}",
+              "type": "number"
+            },
+            {
+              "id": "completed-at",
+              "name": "completedAt",
+              "value": "={{ $json.body.data.completedAt }}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "1b8b0295-4edc-441e-9378-1edfb7c1c1b8",
+      "name": "Process One Source",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [1300, 440],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AI_PUBLISHING_OS_BASE_URL + '/api/internal/research-jobs/' + $('Create Research Job').first().json.body.data.job.id + '/process-source' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ { sourceId: $json.source.id } }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 120000
+        }
+      }
+    },
+    {
+      "id": "bb0730ce-ed83-46be-92fb-4554d4cb00fe",
+      "name": "Process Sources Sequentially",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1040, 300],
+      "parameters": {
+        "batchSize": 1,
+        "options": {
+          "reset": false
+        }
+      }
+    },
+    {
+      "id": "6924cae1-d8a0-4062-87f2-51f8ba3309b6",
+      "name": "Disabled Daily Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [0, 420],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1,
+              "triggerAtHour": 2,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "disabled": true
+    },
+    {
+      "id": "3629c7d2-ad72-46a0-b65a-2706f23287a2",
+      "name": "Setup",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [210, 250],
+      "parameters": {
+        "content": "## Setup\nSet `AI_PUBLISHING_OS_BASE_URL`, `RESEARCH_TOPIC_ID`, and optional `RESEARCH_MODE`. Configure Header Auth with `X-API-Key`. No secret is embedded.",
+        "color": 5,
+        "width": 560,
+        "height": 200
+      }
+    },
+    {
+      "id": "e8e7b9c5-1595-4fbc-9d54-e22ac94703e1",
+      "name": "Security Boundary",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [730, 250],
+      "parameters": {
+        "content": "## Security boundary\nThe application owns URL selection, SSRF protection, fetching, extraction, sanitization, AI calls, validation, and persistence. n8n only orchestrates bounded API calls.",
+        "color": 7,
+        "width": 820,
+        "height": 340
+      }
+    },
+    {
+      "id": "c63ed444-4c19-48cf-8751-252be865ac84",
+      "name": "Schedule Disabled",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-50, 370],
+      "parameters": {
+        "content": "## Schedule disabled\nThe daily trigger is disabled. Test manually before enabling it.",
+        "color": 3,
+        "width": 300,
+        "height": 200
+      }
+    }
+  ],
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Configure Research Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Configure Research Run": {
+      "main": [
+        [
+          {
+            "node": "Create Research Job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Research Job": {
+      "main": [
+        [
+          {
+            "node": "Split Selected Sources",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Selected Sources": {
+      "main": [
+        [
+          {
+            "node": "Process Sources Sequentially",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Complete Research Job": {
+      "main": [
+        [
+          {
+            "node": "Present Research Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process One Source": {
+      "main": [
+        [
+          {
+            "node": "Process Sources Sequentially",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Sources Sequentially": {
+      "main": [
+        [
+          {
+            "node": "Complete Research Job",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Process One Source",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Disabled Daily Schedule": {
+      "main": [
+        [
+          {
+            "node": "Configure Research Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

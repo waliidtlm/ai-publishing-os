@@ -62,6 +62,20 @@ or entity declarations. See [RSS collector](rss-collector.md) for exact
 controls and the residual DNS-rebinding risk. Production deployments should
 also enforce private-network egress denial outside the application process.
 
+## Research sources and model input
+
+Phase 3 research sources reuse the generic outbound destination validation,
+redirect checks, response limits, and retry boundaries. HTML is parsed without
+JavaScript execution, active/hidden elements are removed, and only bounded
+plain text reaches a research provider.
+
+Retrieved text is always untrusted data. Fixed provider instructions reject
+source-supplied commands, structured output is Zod-validated, and supporting
+excerpts must occur in the supplied source. These controls reduce, but cannot
+guarantee elimination of, prompt-injection risk. See
+[Research engine](research-engine.md) for the residual DNS-rebinding risk and
+network defense boundary.
+
 ## Database
 
 The local Compose database publishes host port `5433` for development tooling

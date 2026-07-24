@@ -52,7 +52,9 @@ function asInputJson(value: unknown): Prisma.InputJsonValue {
 
 function isRetryableTransactionError(error: unknown): boolean {
   const prismaTransactionConflict =
-    error instanceof Prisma.PrismaClientKnownRequestError &&
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
     (error.code === "P2002" || error.code === "P2034");
 
   if (prismaTransactionConflict) {

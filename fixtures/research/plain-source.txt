@@ -1,0 +1,1 @@
+Deterministic research can process plain text sources when the content type is explicitly text/plain. The source remains untrusted data and all stored excerpts are length limited. This fixture provides enough readable content for local tests without contacting a public website.

@@ -10,6 +10,45 @@ function formatTimestamp(value: Date | null): string {
   return value ? value.toISOString() : "Never";
 }
 
+interface DisplayClaim {
+  claim: string;
+  confidence: string;
+  evidenceId: string | null;
+  supportingExcerpt: string;
+}
+
+function claimsForDisplay(value: unknown): DisplayClaim[] {
+  if (!Array.isArray(value)) return [];
+
+  return value.flatMap((claim) => {
+    if (
+      typeof claim !== "object" ||
+      claim === null ||
+      !("claim" in claim) ||
+      !("supportingExcerpt" in claim) ||
+      typeof claim.claim !== "string" ||
+      typeof claim.supportingExcerpt !== "string"
+    ) {
+      return [];
+    }
+
+    return [
+      {
+        claim: claim.claim,
+        confidence:
+          "confidence" in claim && typeof claim.confidence === "string"
+            ? claim.confidence
+            : "unknown",
+        evidenceId:
+          "evidenceId" in claim && typeof claim.evidenceId === "string"
+            ? claim.evidenceId
+            : null,
+        supportingExcerpt: claim.supportingExcerpt,
+      },
+    ];
+  });
+}
+
 export default async function DashboardPage() {
   const session = await requireSession();
   const environment = getDatabaseEnvironment();
@@ -22,6 +61,19 @@ export default async function DashboardPage() {
             collectedAt: "desc",
           },
           take: 5,
+        },
+        researchJobs: {
+          include: {
+            notes: {
+              orderBy: {
+                createdAt: "asc",
+              },
+            },
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+          take: 1,
         },
         site: {
           select: {
@@ -178,49 +230,151 @@ export default async function DashboardPage() {
           </p>
         ) : (
           <div className="topic-list">
-            {topics.map((topic) => (
-              <article className="topic-card" key={topic.id}>
-                <div className="topic-card-heading">
-                  <div>
-                    <h3>{topic.title}</h3>
-                    <p className="topic-meta">
-                      {topic.site.name} {" · "} {topic.status.toLowerCase()}{" "}
-                      {" · "} {topic.priority.toLowerCase()}
-                      {topic.intakeOrigin === "internal_api"
-                        ? " · Internal API"
-                        : ""}
-                    </p>
+            {topics.map((topic) => {
+              const latestResearchJob = topic.researchJobs[0];
+
+              return (
+                <article className="topic-card" key={topic.id}>
+                  <div className="topic-card-heading">
+                    <div>
+                      <h3>{topic.title}</h3>
+                      <p className="topic-meta">
+                        {topic.site.name} {" · "} {topic.status.toLowerCase()}{" "}
+                        {" · "} {topic.priority.toLowerCase()}
+                        {topic.intakeOrigin === "internal_api"
+                          ? " · Internal API"
+                          : ""}
+                      </p>
+                    </div>
+                    <span className="count-badge">
+                      {topic.evidence.length} evidence
+                    </span>
                   </div>
-                  <span className="count-badge">
-                    {topic.evidence.length} evidence
-                  </span>
-                </div>
 
-                {topic.description ? <p>{topic.description}</p> : null}
+                  {topic.description ? <p>{topic.description}</p> : null}
 
-                {topic.evidence.length > 0 ? (
-                  <ul className="evidence-list">
-                    {topic.evidence.map((evidence) => (
-                      <li key={evidence.id}>
-                        <a
-                          href={evidence.sourceUrl}
-                          rel="noreferrer"
-                          target="_blank"
-                        >
-                          {evidence.sourceTitle ?? evidence.sourceUrl}
-                        </a>
-                        <span>
-                          {evidence.evidenceType.toLowerCase()} {" · "}
-                          {evidence.collectedAt.toISOString()}
+                  {topic.evidence.length > 0 ? (
+                    <ul className="evidence-list">
+                      {topic.evidence.map((evidence) => (
+                        <li key={evidence.id}>
+                          <a
+                            href={evidence.sourceUrl}
+                            rel="noreferrer"
+                            target="_blank"
+                          >
+                            {evidence.sourceTitle ?? evidence.sourceUrl}
+                          </a>
+                          <span>
+                            {evidence.evidenceType.toLowerCase()} {" · "}
+                            {evidence.collectedAt.toISOString()}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="muted topic-empty">No evidence attached.</p>
+                  )}
+
+                  {latestResearchJob ? (
+                    <section className="research-summary">
+                      <div className="topic-card-heading">
+                        <div>
+                          <h4>Latest research</h4>
+                          <p className="topic-meta">
+                            {latestResearchJob.status.toLowerCase()} {" · "}
+                            {latestResearchJob.mode.toLowerCase()}
+                            {latestResearchJob.deterministicFallbackUsed
+                              ? " · deterministic fallback"
+                              : ""}
+                          </p>
+                        </div>
+                        <span className="count-badge">
+                          {latestResearchJob.generatedNoteCount} notes
                         </span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="muted topic-empty">No evidence attached.</p>
-                )}
-              </article>
-            ))}
+                      </div>
+
+                      <dl className="source-metrics">
+                        <div>
+                          <dt>Started</dt>
+                          <dd>
+                            {formatTimestamp(latestResearchJob.startedAt)}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Completed</dt>
+                          <dd>
+                            {formatTimestamp(latestResearchJob.completedAt)}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Sources</dt>
+                          <dd>
+                            {latestResearchJob.successfulSourceCount}{" "}
+                            successful, {latestResearchJob.skippedSourceCount}{" "}
+                            skipped, {latestResearchJob.failedSourceCount}{" "}
+                            failed
+                          </dd>
+                        </div>
+                      </dl>
+
+                      {latestResearchJob.errorSummary ? (
+                        <p className="source-error">
+                          Research error: {latestResearchJob.errorSummary}
+                        </p>
+                      ) : null}
+
+                      {latestResearchJob.notes.map((note) => (
+                        <article className="research-note" key={note.id}>
+                          <h5>{note.title}</h5>
+                          <p>{note.summary}</p>
+                          <a
+                            className="source-url"
+                            href={note.sourceUrl}
+                            rel="noreferrer"
+                            target="_blank"
+                          >
+                            {note.sourceTitle}
+                          </a>
+                          <p className="topic-meta">
+                            {note.sourcePublisher ?? "Unknown publisher"}{" "}
+                            {" · "}
+                            fetched {note.fetchedAt.toISOString()} {" · "}
+                            {note.mode.toLowerCase()}
+                          </p>
+
+                          {claimsForDisplay(note.claims).length > 0 ? (
+                            <ul className="claim-list">
+                              {claimsForDisplay(note.claims).map(
+                                (claim, index) => (
+                                  <li key={`${note.id}-claim-${index}`}>
+                                    <p>{claim.claim}</p>
+                                    <blockquote>
+                                      {claim.supportingExcerpt}
+                                    </blockquote>
+                                    <span>
+                                      Confidence: {claim.confidence}
+                                      {claim.evidenceId
+                                        ? ` · Evidence: ${claim.evidenceId}`
+                                        : " · Source configuration"}
+                                    </span>
+                                  </li>
+                                ),
+                              )}
+                            </ul>
+                          ) : (
+                            <p className="muted">No factual claims recorded.</p>
+                          )}
+                        </article>
+                      ))}
+                    </section>
+                  ) : (
+                    <p className="muted topic-empty">
+                      No research job has started.
+                    </p>
+                  )}
+                </article>
+              );
+            })}
           </div>
         )}
       </section>

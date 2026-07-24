@@ -100,6 +100,56 @@ enum RssCollectionStatus {
   @@map("rss_collection_status")
 }
 
+enum ResearchJobStatus {
+  QUEUED    @map("queued")
+  RUNNING   @map("running")
+  COMPLETED @map("completed")
+  PARTIAL   @map("partial")
+  FAILED    @map("failed")
+  CANCELLED @map("cancelled")
+
+  @@map("research_job_status")
+}
+
+enum ResearchTriggerType {
+  MANUAL      @map("manual")
+  INTERNAL_API @map("internal_api")
+  N8N         @map("n8n")
+
+  @@map("research_trigger_type")
+}
+
+enum ResearchMode {
+  DETERMINISTIC @map("deterministic")
+  OPENAI        @map("openai")
+
+  @@map("research_mode")
+}
+
+enum ResearchSourceStatus {
+  SELECTED   @map("selected")
+  PROCESSING @map("processing")
+  SUCCEEDED  @map("succeeded")
+  SKIPPED    @map("skipped")
+  FAILED     @map("failed")
+
+  @@map("research_source_status")
+}
+
+enum ResearchNoteType {
+  SOURCE_SUMMARY @map("source_summary")
+
+  @@map("research_note_type")
+}
+
+enum AiUsageStatus {
+  STARTED   @map("started")
+  SUCCEEDED @map("succeeded")
+  FAILED    @map("failed")
+
+  @@map("ai_usage_status")
+}
+
 model User {
   id        String     @id @default(cuid())
   name      String?
@@ -123,6 +173,8 @@ model Site {
   updatedAt      DateTime       @updatedAt @map("updated_at")
   sourceConfigs  SourceConfig[]
   topics         Topic[]
+  researchJobs   ResearchJob[]
+  researchNotes  ResearchNote[]
 
   @@index([status])
   @@map("sites")
@@ -151,6 +203,7 @@ model SourceConfig {
   site                      Site                 @relation(fields: [siteId], references: [id], onDelete: Cascade)
   evidence                  TopicEvidence[]
   rssCollectionRuns         RssCollectionRun[]
+  researchJobSources        ResearchJobSource[]
 
   @@unique([siteId, name])
   @@index([siteId, isActive])
@@ -203,6 +256,8 @@ model Topic {
   site            Site            @relation(fields: [siteId], references: [id], onDelete: Cascade)
   evidence        TopicEvidence[]
   scores          TopicScore[]
+  researchJobs    ResearchJob[]
+  researchNotes   ResearchNote[]
 
   @@unique([siteId, normalizedTitle])
   @@index([siteId, status, priority])
@@ -226,6 +281,8 @@ model TopicEvidence {
   updatedAt           DateTime      @updatedAt @map("updated_at")
   topic               Topic         @relation(fields: [topicId], references: [id], onDelete: Cascade)
   sourceConfig        SourceConfig? @relation(fields: [sourceConfigId], references: [id], onDelete: SetNull)
+  researchJobSources  ResearchJobSource[]
+  researchNotes       ResearchNote[]
 
   @@unique([topicId, sourceUrl, evidenceType])
   @@unique([topicId, evidenceFingerprint])
@@ -260,6 +317,7 @@ model AuditLog {
   entityType    String   @map("entity_type")
   entityId      String   @map("entity_id")
   action        String
+  dedupeKey     String?  @unique @map("dedupe_key")
   previousValue Json?    @map("previous_value")
   newValue      Json?    @map("new_value")
   createdAt     DateTime @default(now()) @map("created_at")
@@ -299,4 +357,136 @@ model InternalApiRateLimitBucket {
   @@unique([scope, identifierHash, windowStart])
   @@index([windowStart])
   @@map("internal_api_rate_limit_buckets")
+}
+
+model ResearchJob {
+  id                         String              @id @default(cuid())
+  siteId                     String              @map("site_id")
+  topicId                    String              @map("topic_id")
+  activeTopicId              String?             @unique @map("active_topic_id")
+  status                     ResearchJobStatus   @default(QUEUED)
+  triggerType                ResearchTriggerType @map("trigger_type")
+  mode                       ResearchMode
+  deterministicFallbackUsed Boolean             @default(false) @map("deterministic_fallback_used")
+  startedAt                  DateTime?           @map("started_at")
+  completedAt                DateTime?           @map("completed_at")
+  failedAt                   DateTime?           @map("failed_at")
+  selectedEvidenceCount      Int                 @default(0) @map("selected_evidence_count")
+  fetchedSourceCount         Int                 @default(0) @map("fetched_source_count")
+  successfulSourceCount      Int                 @default(0) @map("successful_source_count")
+  skippedSourceCount         Int                 @default(0) @map("skipped_source_count")
+  failedSourceCount          Int                 @default(0) @map("failed_source_count")
+  generatedNoteCount         Int                 @default(0) @map("generated_note_count")
+  errorCode                  String?             @map("error_code")
+  errorSummary               String?             @map("error_summary")
+  workflowExecutionReference String?             @map("workflow_execution_reference")
+  metadata                   Json?
+  createdAt                  DateTime             @default(now()) @map("created_at")
+  updatedAt                  DateTime             @updatedAt @map("updated_at")
+  site                       Site                 @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  topic                      Topic                @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  sources                    ResearchJobSource[]
+  notes                      ResearchNote[]
+  aiUsage                    AiUsage[]
+
+  @@index([siteId, status, createdAt])
+  @@index([topicId, createdAt])
+  @@map("research_jobs")
+}
+
+model ResearchJobSource {
+  id                  String               @id @default(cuid())
+  researchJobId       String               @map("research_job_id")
+  evidenceId          String?              @map("evidence_id")
+  sourceConfigId      String?              @map("source_config_id")
+  sourceUrl           String               @map("source_url")
+  canonicalUrl        String               @map("canonical_url")
+  sourceTitle         String?              @map("source_title")
+  selectionRank       Int                  @map("selection_rank")
+  status              ResearchSourceStatus @default(SELECTED)
+  attemptCount        Int                  @default(0) @map("attempt_count")
+  fetchedAt           DateTime?            @map("fetched_at")
+  contentType         String?              @map("content_type")
+  contentFingerprint  String?              @map("content_fingerprint")
+  errorCode           String?              @map("error_code")
+  errorSummary        String?              @map("error_summary")
+  createdAt           DateTime             @default(now()) @map("created_at")
+  updatedAt           DateTime             @updatedAt @map("updated_at")
+  researchJob         ResearchJob          @relation(fields: [researchJobId], references: [id], onDelete: Cascade)
+  evidence            TopicEvidence?       @relation(fields: [evidenceId], references: [id], onDelete: SetNull)
+  sourceConfig        SourceConfig?        @relation(fields: [sourceConfigId], references: [id], onDelete: SetNull)
+  notes               ResearchNote[]
+  aiUsage             AiUsage[]
+
+  @@unique([researchJobId, canonicalUrl])
+  @@index([researchJobId, status, selectionRank])
+  @@index([evidenceId])
+  @@map("research_job_sources")
+}
+
+model ResearchNote {
+  id                  String           @id @default(cuid())
+  researchJobId       String           @map("research_job_id")
+  researchJobSourceId String           @map("research_job_source_id")
+  topicId             String           @map("topic_id")
+  siteId              String           @map("site_id")
+  evidenceId          String?          @map("evidence_id")
+  noteType            ResearchNoteType @default(SOURCE_SUMMARY) @map("note_type")
+  mode                ResearchMode
+  version             Int              @default(1)
+  title               String
+  summary             String
+  claims              Json
+  definitions         Json
+  statistics          Json
+  examples            Json
+  risks               Json
+  openQuestions       Json             @map("open_questions")
+  excerpts            Json
+  sourceUrl           String           @map("source_url")
+  sourceTitle         String           @map("source_title")
+  sourcePublisher     String?          @map("source_publisher")
+  author              String?
+  publishedAt         DateTime?        @map("published_at")
+  fetchedAt           DateTime         @map("fetched_at")
+  contentFingerprint  String           @map("content_fingerprint")
+  qualityFlags        Json?            @map("quality_flags")
+  metadata            Json?
+  createdAt           DateTime         @default(now()) @map("created_at")
+  updatedAt           DateTime         @updatedAt @map("updated_at")
+  researchJob         ResearchJob      @relation(fields: [researchJobId], references: [id], onDelete: Cascade)
+  researchJobSource   ResearchJobSource @relation(fields: [researchJobSourceId], references: [id], onDelete: Cascade)
+  topic               Topic            @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  site                Site             @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  evidence            TopicEvidence?   @relation(fields: [evidenceId], references: [id], onDelete: SetNull)
+  aiUsage             AiUsage[]
+
+  @@unique([researchJobSourceId, contentFingerprint])
+  @@index([topicId, createdAt])
+  @@index([researchJobId, createdAt])
+  @@map("research_notes")
+}
+
+model AiUsage {
+  id                  String        @id @default(cuid())
+  researchJobId       String        @map("research_job_id")
+  researchJobSourceId String        @map("research_job_source_id")
+  researchNoteId      String?       @map("research_note_id")
+  requestKey          String        @unique @map("request_key")
+  provider            String
+  model               String
+  inputTokens         Int?          @map("input_tokens")
+  outputTokens        Int?          @map("output_tokens")
+  estimatedCostUsd    Decimal?      @db.Decimal(12, 6) @map("estimated_cost_usd")
+  requestDurationMs   Int           @map("request_duration_ms")
+  status              AiUsageStatus
+  errorCode           String?       @map("error_code")
+  promptTemplateVersion String      @map("prompt_template_version")
+  createdAt           DateTime      @default(now()) @map("created_at")
+  researchJob         ResearchJob   @relation(fields: [researchJobId], references: [id], onDelete: Cascade)
+  researchJobSource   ResearchJobSource @relation(fields: [researchJobSourceId], references: [id], onDelete: Cascade)
+  researchNote        ResearchNote? @relation(fields: [researchNoteId], references: [id], onDelete: SetNull)
+
+  @@index([researchJobId, createdAt])
+  @@map("ai_usage")
 }

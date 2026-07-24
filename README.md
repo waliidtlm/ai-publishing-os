@@ -3,10 +3,11 @@
 Self-hosted publishing operations application. The repository provides the
 Phase 0 foundation plus a secured, idempotent internal topic-intake pipeline,
 an application-secured RSS/Atom source adapter, collection visibility,
-PostgreSQL-backed rate limiting, and importable n8n workflows.
+PostgreSQL-backed rate limiting, a structured research engine with claim
+provenance, and importable n8n workflows.
 
-AI generation, webpage crawling, WordPress publishing, Search Console, Reddit,
-and GitHub collectors are intentionally not implemented.
+Article generation, unrestricted crawling, WordPress publishing, Search
+Console, Reddit, and GitHub collectors are intentionally not implemented.
 
 ## Selected versions
 

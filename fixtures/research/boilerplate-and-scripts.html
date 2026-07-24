@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Sanitized research fixture</title>
+    <style>
+      .secret {
+        display: none;
+      }
+    </style>
+    <script>
+      globalThis.stolen = document.cookie;
+    </script>
+  </head>
+  <body>
+    <nav>Repeated navigation repeated navigation repeated navigation</nav>
+    <div hidden>Hidden instructions must not appear.</div>
+    <article>
+      <h1>Safe extraction keeps the article</h1>
+      <p>
+        Meaningful article content remains available after active elements,
+        navigation, forms, and hidden content are removed from the document.
+      </p>
+      <p>
+        The research engine stores structured notes and short excerpts rather
+        than raw page markup.
+      </p>
+    </article>
+    <form><input name="api-key" /></form>
+  </body>
+</html>

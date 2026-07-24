@@ -65,3 +65,15 @@ response, n8n, rate-limit, and security contract.
 
 See [RSS collector](rss-collector.md) for authentication, request/response,
 security, caching, limits, workflow, and testing details.
+
+## Internal research engine
+
+- `POST /api/internal/topics/:topicId/research-jobs`
+- `GET /api/internal/research-jobs/:jobId`
+- `POST /api/internal/research-jobs/:jobId/process-source`
+- `POST /api/internal/research-jobs/:jobId/complete`
+
+All routes use the existing internal authentication, rate limits, and response
+envelope. Clients submit selected job-source IDs, never arbitrary fetch URLs.
+See [Research engine](research-engine.md) for lifecycle, errors, limits,
+provider configuration, and n8n setup.

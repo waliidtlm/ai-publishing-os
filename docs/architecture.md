@@ -5,8 +5,10 @@
 Phase 0 establishes the runtime and repository boundaries. Phase 1 adds the
 secured Topic Intake API. Phase 2 adds an n8n-orchestrated RSS/Atom source
 adapter whose security-sensitive fetch and parser execute inside the
-application. It does not implement webpage collection, AI generation,
-WordPress publishing, or analytics.
+application. Phase 3 adds a provider-neutral research engine with secured
+webpage extraction, deterministic/OpenAI structured notes, claim provenance,
+and n8n orchestration. It does not implement articles, final briefs, WordPress
+publishing, or analytics.
 
 ## Components
 

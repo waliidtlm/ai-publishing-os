@@ -2,6 +2,7 @@ import { resolve } from "node:path";
 
 import {
   developmentAuthEnvironmentSchema,
+  researchEnvironmentSchema,
   serverEnvironmentSchema,
 } from "@ai-publishing-os/schemas";
 import { config } from "dotenv";
@@ -13,6 +14,7 @@ config({
 
 try {
   serverEnvironmentSchema.parse(process.env);
+  researchEnvironmentSchema.parse(process.env);
 
   if ((process.env.NODE_ENV ?? "development") === "development") {
     developmentAuthEnvironmentSchema.parse(process.env);
