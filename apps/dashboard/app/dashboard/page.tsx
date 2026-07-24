@@ -49,6 +49,123 @@ function claimsForDisplay(value: unknown): DisplayClaim[] {
   });
 }
 
+function stringsForDisplay(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
+}
+
+function safeExternalUrl(value: string): string | null {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:" ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+interface BriefSectionDisplay {
+  heading: string;
+  keyPoints: string[];
+  sourceReferences: Array<{
+    sourceTitle: string;
+    sourceUrl: string;
+  }>;
+}
+
+function briefSectionsForDisplay(value: unknown): BriefSectionDisplay[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((section) => {
+    if (
+      !section ||
+      typeof section !== "object" ||
+      !("heading" in section) ||
+      typeof section.heading !== "string"
+    ) {
+      return [];
+    }
+    const sourceReferences =
+      "sourceReferences" in section && Array.isArray(section.sourceReferences)
+        ? section.sourceReferences.flatMap((source: unknown) =>
+            source &&
+            typeof source === "object" &&
+            "sourceTitle" in source &&
+            "sourceUrl" in source &&
+            typeof source.sourceTitle === "string" &&
+            typeof source.sourceUrl === "string"
+              ? safeExternalUrl(source.sourceUrl)
+                ? [
+                    {
+                      sourceTitle: source.sourceTitle,
+                      sourceUrl: source.sourceUrl,
+                    },
+                  ]
+                : []
+              : [],
+          )
+        : [];
+    return [
+      {
+        heading: section.heading,
+        keyPoints:
+          "keyPoints" in section ? stringsForDisplay(section.keyPoints) : [],
+        sourceReferences,
+      },
+    ];
+  });
+}
+
+interface BriefClaimDisplay {
+  claim: string;
+  sources: Array<{ sourceTitle: string; sourceUrl: string }>;
+}
+
+function briefClaimsForDisplay(value: unknown): BriefClaimDisplay[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((claim) => {
+    if (
+      !claim ||
+      typeof claim !== "object" ||
+      !("claim" in claim) ||
+      typeof claim.claim !== "string"
+    ) {
+      return [];
+    }
+    const sources =
+      "sourceReferences" in claim && Array.isArray(claim.sourceReferences)
+        ? claim.sourceReferences.flatMap((source: unknown) => {
+            if (
+              !source ||
+              typeof source !== "object" ||
+              !("sourceTitle" in source) ||
+              !("sourceUrl" in source) ||
+              typeof source.sourceTitle !== "string" ||
+              typeof source.sourceUrl !== "string" ||
+              !safeExternalUrl(source.sourceUrl)
+            ) {
+              return [];
+            }
+            return [
+              {
+                sourceTitle: source.sourceTitle,
+                sourceUrl: source.sourceUrl,
+              },
+            ];
+          })
+        : [];
+    return [{ claim: claim.claim, sources }];
+  });
+}
+
+function objectText(value: unknown, key: string): string {
+  return value &&
+    typeof value === "object" &&
+    key in value &&
+    typeof value[key as keyof typeof value] === "string"
+    ? String(value[key as keyof typeof value])
+    : "Not recorded";
+}
+
 export default async function DashboardPage() {
   const session = await requireSession();
   const environment = getDatabaseEnvironment();
@@ -61,6 +178,20 @@ export default async function DashboardPage() {
             collectedAt: "desc",
           },
           take: 5,
+        },
+        contentBriefs: {
+          include: {
+            briefGenerationJob: {
+              select: {
+                mode: true,
+                status: true,
+              },
+            },
+          },
+          orderBy: {
+            version: "desc",
+          },
+          take: 10,
         },
         researchJobs: {
           include: {
@@ -232,6 +363,7 @@ export default async function DashboardPage() {
           <div className="topic-list">
             {topics.map((topic) => {
               const latestResearchJob = topic.researchJobs[0];
+              const latestBrief = topic.contentBriefs[0];
 
               return (
                 <article className="topic-card" key={topic.id}>
@@ -370,6 +502,175 @@ export default async function DashboardPage() {
                   ) : (
                     <p className="muted topic-empty">
                       No research job has started.
+                    </p>
+                  )}
+
+                  {latestBrief ? (
+                    <section className="research-summary brief-summary">
+                      <div className="topic-card-heading">
+                        <div>
+                          <h4>Current content brief</h4>
+                          <p className="topic-meta">
+                            Version {latestBrief.version} {" · "}
+                            {latestBrief.briefGenerationJob.mode.toLowerCase()}{" "}
+                            {" · "}
+                            generation{" "}
+                            {latestBrief.briefGenerationJob.status.toLowerCase()}{" "}
+                            / {latestBrief.status.toLowerCase()}
+                          </p>
+                        </div>
+                        <span className="count-badge">
+                          {latestBrief.articleType.toLowerCase()}
+                        </span>
+                      </div>
+
+                      <h5>{latestBrief.primaryTitle}</h5>
+                      {stringsForDisplay(latestBrief.alternativeTitles).length >
+                      0 ? (
+                        <ul>
+                          {stringsForDisplay(latestBrief.alternativeTitles).map(
+                            (title) => (
+                              <li key={title}>{title}</li>
+                            ),
+                          )}
+                        </ul>
+                      ) : null}
+
+                      <dl className="source-metrics">
+                        <div>
+                          <dt>Audience</dt>
+                          <dd>
+                            {objectText(
+                              latestBrief.targetAudience,
+                              "description",
+                            )}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Intent</dt>
+                          <dd>
+                            {latestBrief.intentType.toLowerCase()}:{" "}
+                            {objectText(latestBrief.intent, "description")}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Word count</dt>
+                          <dd>
+                            {latestBrief.estimatedWordCountMinimum}–
+                            {latestBrief.estimatedWordCountMaximum}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Created</dt>
+                          <dd>{latestBrief.createdAt.toISOString()}</dd>
+                        </div>
+                      </dl>
+
+                      <p>
+                        <strong>Angle:</strong> {latestBrief.angle}
+                      </p>
+                      <p>
+                        <strong>Purpose:</strong> {latestBrief.purpose}
+                      </p>
+                      <div className="brief-outline">
+                        <h5>Structured outline</h5>
+                        {briefSectionsForDisplay(latestBrief.outline).map(
+                          (section) => (
+                            <article
+                              className="research-note"
+                              key={section.heading}
+                            >
+                              <h5>{section.heading}</h5>
+                              <ul>
+                                {section.keyPoints.map((point) => (
+                                  <li key={point}>{point}</li>
+                                ))}
+                              </ul>
+                              {section.sourceReferences.map((source) => (
+                                <a
+                                  className="source-url"
+                                  href={source.sourceUrl}
+                                  key={`${section.heading}-${source.sourceUrl}`}
+                                  rel="noreferrer"
+                                  target="_blank"
+                                >
+                                  {source.sourceTitle}
+                                </a>
+                              ))}
+                            </article>
+                          ),
+                        )}
+                      </div>
+
+                      <div className="brief-outline">
+                        <h5>Validated claims and provenance</h5>
+                        {briefClaimsForDisplay(latestBrief.keyClaims).length >
+                        0 ? (
+                          <ul>
+                            {briefClaimsForDisplay(latestBrief.keyClaims).map(
+                              (claim) => (
+                                <li key={claim.claim}>
+                                  <span>{claim.claim}</span>
+                                  {claim.sources.map((source) => (
+                                    <a
+                                      className="source-url"
+                                      href={source.sourceUrl}
+                                      key={`${claim.claim}-${source.sourceUrl}`}
+                                      rel="noreferrer"
+                                      target="_blank"
+                                    >
+                                      {source.sourceTitle}
+                                    </a>
+                                  ))}
+                                </li>
+                              ),
+                            )}
+                          </ul>
+                        ) : (
+                          <p className="muted">
+                            No factual claims were approved.
+                          </p>
+                        )}
+                      </div>
+
+                      <details>
+                        <summary>Planning checks and version history</summary>
+                        <h5>Research gaps</h5>
+                        <pre>
+                          {JSON.stringify(latestBrief.researchGaps, null, 2)}
+                        </pre>
+                        <h5>Drafting instructions</h5>
+                        <ul>
+                          {stringsForDisplay(
+                            latestBrief.draftingInstructions,
+                          ).map((instruction) => (
+                            <li key={instruction}>{instruction}</li>
+                          ))}
+                        </ul>
+                        <h5>Quality checklist</h5>
+                        <ul>
+                          {stringsForDisplay(
+                            latestBrief.qualityRequirements,
+                          ).map((requirement) => (
+                            <li key={requirement}>{requirement}</li>
+                          ))}
+                        </ul>
+                        <h5>Version history</h5>
+                        <ul>
+                          {topic.contentBriefs.map((brief) => (
+                            <li key={brief.id}>
+                              v{brief.version}: {brief.primaryTitle} (
+                              {brief.status.toLowerCase()},{" "}
+                              {brief.briefGenerationJob.mode.toLowerCase()},{" "}
+                              {brief.createdAt.toISOString()})
+                            </li>
+                          ))}
+                        </ul>
+                      </details>
+                    </section>
+                  ) : (
+                    <p className="muted topic-empty">
+                      No content brief has been generated.
                     </p>
                   )}
                 </article>

@@ -1,0 +1,55 @@
+{
+  "wellResearchedTechnicalTopic": {
+    "title": "Reliable n8n error workflows",
+    "claims": [
+      {
+        "claim": "Bounded retries limit repeated transient failures.",
+        "confidence": "high",
+        "supportingExcerpt": "Bounded retries limit repeated transient failures."
+      },
+      {
+        "claim": "Idempotency prevents duplicate side effects during replay.",
+        "confidence": "high",
+        "supportingExcerpt": "Idempotency prevents duplicate side effects during replay."
+      }
+    ]
+  },
+  "duplicateClaims": [
+    "Bounded retries limit repeated transient failures.",
+    " bounded retries LIMIT repeated transient failures. "
+  ],
+  "conflictingClaims": [
+    {
+      "claim": "The provider retries 429 responses automatically.",
+      "source": "secondary"
+    },
+    {
+      "claim": "The provider does not retry 429 responses automatically.",
+      "source": "official"
+    }
+  ],
+  "minorResearchGap": {
+    "description": "The provider-specific maximum retry count is not documented.",
+    "impact": "minor",
+    "type": "missing_primary_source"
+  },
+  "insufficientResearch": {
+    "notes": [],
+    "claims": []
+  },
+  "crossSiteEvidence": {
+    "topicSiteId": "site-a",
+    "evidenceSiteId": "site-b"
+  },
+  "fabricatedReference": {
+    "researchClaimId": "unknown-note:claim:999",
+    "evidenceId": "unknown-evidence"
+  },
+  "duplicateOutlineSections": ["Retry strategy", " retry STRATEGY "],
+  "validDeterministicBrief": {
+    "primaryTitle": "Reliable n8n error workflows: An evidence-grounded guide",
+    "mode": "deterministic",
+    "minimumSections": 3,
+    "provenanceRequired": true
+  }
+}

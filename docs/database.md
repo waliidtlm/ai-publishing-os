@@ -18,6 +18,9 @@ driver adapter.
 - `IntakeIdempotencyRecord`: site-scoped request hash and stored intake result.
 - `InternalApiRateLimitBucket`: shared fixed-window internal API counters.
 - `RssCollectionRun`: bounded per-source RSS collection history and counts.
+- `BriefGenerationJob`: bounded, idempotent generation lifecycle and research snapshot.
+- `ContentBrief`: versioned structured planning document with one current version per topic.
+- `AiUsage`: shared research and content-brief provider usage reservations.
 
 The database stores operational fields in typed columns. JSON is reserved for
 optional metadata and before/after audit snapshots.

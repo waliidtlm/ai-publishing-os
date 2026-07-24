@@ -154,6 +154,89 @@ export const researchEnvironmentSchema = z
     }
   });
 
+export const contentBriefEnvironmentSchema = z
+  .object({
+    AI_API_KEY: z.preprocess(
+      (value) => (value === "" ? undefined : value),
+      z.string().min(20).max(512).optional(),
+    ),
+    AI_MODEL_CONTENT_BRIEF: z
+      .string()
+      .trim()
+      .min(1)
+      .max(100)
+      .default("gpt-5-mini"),
+    CONTENT_BRIEF_AI_ENABLED: booleanEnvironmentValue,
+    CONTENT_BRIEF_ALLOW_DETERMINISTIC_FALLBACK: booleanEnvironmentValue,
+    CONTENT_BRIEF_DEFAULT_MODE: z
+      .enum(["deterministic", "openai"])
+      .default("deterministic"),
+    CONTENT_BRIEF_MAX_CLAIMS: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .max(50)
+      .default(50),
+    CONTENT_BRIEF_MAX_GENERATIONS_PER_HOUR: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .max(100)
+      .default(10),
+    CONTENT_BRIEF_MAX_GENERATIONS_PER_TOPIC_PER_HOUR: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .max(25)
+      .default(3),
+    CONTENT_BRIEF_MAX_CONCURRENT_AI_PER_SITE: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .max(5)
+      .default(1),
+    CONTENT_BRIEF_MAX_NOTES: z.coerce.number().int().min(1).max(20).default(20),
+    CONTENT_BRIEF_MAX_OUTLINE_SECTIONS: z.coerce
+      .number()
+      .int()
+      .min(3)
+      .max(12)
+      .default(12),
+    CONTENT_BRIEF_MAX_OUTPUT_TOKENS: z.coerce
+      .number()
+      .int()
+      .min(512)
+      .max(16_384)
+      .default(4_000),
+    CONTENT_BRIEF_MAX_PROMPT_CHARS: z.coerce
+      .number()
+      .int()
+      .min(10_000)
+      .max(250_000)
+      .default(120_000),
+    CONTENT_BRIEF_MAX_SOURCES: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .max(20)
+      .default(20),
+  })
+  .superRefine((value, context) => {
+    if (
+      value.CONTENT_BRIEF_DEFAULT_MODE === "openai" &&
+      value.CONTENT_BRIEF_AI_ENABLED &&
+      !value.AI_API_KEY &&
+      !value.CONTENT_BRIEF_ALLOW_DETERMINISTIC_FALLBACK
+    ) {
+      context.addIssue({
+        code: "custom",
+        message:
+          "AI_API_KEY is required for OpenAI brief mode unless deterministic fallback is explicitly enabled",
+        path: ["AI_API_KEY"],
+      });
+    }
+  });
+
 export const authEnvironmentSchema = z.object({
   NEXTAUTH_SECRET: z.string().min(32),
   NEXTAUTH_URL: z.url().optional(),
@@ -171,6 +254,9 @@ export const serverEnvironmentSchema = databaseEnvironmentSchema
   .and(authEnvironmentSchema);
 
 export type DatabaseEnvironment = z.infer<typeof databaseEnvironmentSchema>;
+export type ContentBriefEnvironment = z.infer<
+  typeof contentBriefEnvironmentSchema
+>;
 export type DevelopmentAuthEnvironment = z.infer<
   typeof developmentAuthEnvironmentSchema
 >;

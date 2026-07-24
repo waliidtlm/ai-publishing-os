@@ -150,6 +150,58 @@ enum AiUsageStatus {
   @@map("ai_usage_status")
 }
 
+enum AiOperationType {
+  RESEARCH_SOURCE_NOTES @map("research_source_notes")
+  CONTENT_BRIEF        @map("content_brief")
+
+  @@map("ai_operation_type")
+}
+
+enum BriefGenerationJobStatus {
+  QUEUED    @map("queued")
+  RUNNING   @map("running")
+  COMPLETED @map("completed")
+  FAILED    @map("failed")
+  CANCELLED @map("cancelled")
+
+  @@map("brief_generation_job_status")
+}
+
+enum ContentBriefStatus {
+  CURRENT    @map("current")
+  SUPERSEDED @map("superseded")
+
+  @@map("content_brief_status")
+}
+
+enum ReaderIntentType {
+  INFORMATIONAL      @map("informational")
+  HOW_TO             @map("how_to")
+  COMPARISON         @map("comparison")
+  DECISION_SUPPORT   @map("decision_support")
+  TROUBLESHOOTING    @map("troubleshooting")
+  TRANSACTIONAL      @map("transactional")
+  NAVIGATIONAL       @map("navigational")
+  THOUGHT_LEADERSHIP @map("thought_leadership")
+
+  @@map("reader_intent_type")
+}
+
+enum ArticleType {
+  GUIDE           @map("guide")
+  EXPLAINER       @map("explainer")
+  TUTORIAL        @map("tutorial")
+  COMPARISON      @map("comparison")
+  CHECKLIST       @map("checklist")
+  CASE_STUDY      @map("case_study")
+  OPINION         @map("opinion")
+  REFERENCE       @map("reference")
+  TROUBLESHOOTING @map("troubleshooting")
+  NEWS_ANALYSIS   @map("news_analysis")
+
+  @@map("article_type")
+}
+
 model User {
   id        String     @id @default(cuid())
   name      String?
@@ -175,6 +227,8 @@ model Site {
   topics         Topic[]
   researchJobs   ResearchJob[]
   researchNotes  ResearchNote[]
+  briefGenerationJobs BriefGenerationJob[]
+  contentBriefs  ContentBrief[]
 
   @@index([status])
   @@map("sites")
@@ -258,6 +312,8 @@ model Topic {
   scores          TopicScore[]
   researchJobs    ResearchJob[]
   researchNotes   ResearchNote[]
+  briefGenerationJobs BriefGenerationJob[]
+  contentBriefs   ContentBrief[]
 
   @@unique([siteId, normalizedTitle])
   @@index([siteId, status, priority])
@@ -388,6 +444,8 @@ model ResearchJob {
   sources                    ResearchJobSource[]
   notes                      ResearchNote[]
   aiUsage                    AiUsage[]
+  briefGenerationJobs        BriefGenerationJob[]
+  contentBriefs              ContentBrief[]
 
   @@index([siteId, status, createdAt])
   @@index([topicId, createdAt])
@@ -467,26 +525,126 @@ model ResearchNote {
   @@map("research_notes")
 }
 
+model BriefGenerationJob {
+  id                         String                   @id @default(cuid())
+  siteId                     String                   @map("site_id")
+  topicId                    String                   @map("topic_id")
+  activeTopicId              String?                  @unique @map("active_topic_id")
+  researchJobId              String                   @map("research_job_id")
+  status                     BriefGenerationJobStatus @default(QUEUED)
+  mode                       ResearchMode
+  promptTemplateVersion      String                   @map("prompt_template_version")
+  inputFingerprint           String                   @map("input_fingerprint")
+  researchSnapshotFingerprint String                  @map("research_snapshot_fingerprint")
+  researchSnapshot           Json                     @map("research_snapshot")
+  adjustmentRequest          Json?                    @map("adjustment_request")
+  regenerationReason         String?                  @map("regeneration_reason")
+  startedAt                  DateTime?                @map("started_at")
+  completedAt                DateTime?                @map("completed_at")
+  failedAt                   DateTime?                @map("failed_at")
+  inputNoteCount             Int                      @default(0) @map("input_note_count")
+  inputClaimCount            Int                      @default(0) @map("input_claim_count")
+  includedSourceCount        Int                      @default(0) @map("included_source_count")
+  generatedSectionCount      Int                      @default(0) @map("generated_section_count")
+  errorCode                  String?                  @map("error_code")
+  errorSummary               String?                  @map("error_summary")
+  workflowExecutionReference String?                  @map("workflow_execution_reference")
+  metadata                   Json?
+  createdAt                  DateTime                 @default(now()) @map("created_at")
+  updatedAt                  DateTime                 @updatedAt @map("updated_at")
+  site                       Site                     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  topic                      Topic                    @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  researchJob                ResearchJob              @relation(fields: [researchJobId], references: [id], onDelete: Restrict)
+  briefs                     ContentBrief[]
+  aiUsage                    AiUsage[]
+
+  @@index([siteId, status, createdAt])
+  @@index([topicId, createdAt])
+  @@index([topicId, inputFingerprint])
+  @@map("brief_generation_jobs")
+}
+
+model ContentBrief {
+  id                            String             @id @default(cuid())
+  siteId                        String             @map("site_id")
+  topicId                       String             @map("topic_id")
+  currentTopicId                String?            @unique @map("current_topic_id")
+  briefGenerationJobId          String             @unique @map("brief_generation_job_id")
+  researchJobId                 String             @map("research_job_id")
+  version                       Int
+  status                        ContentBriefStatus @default(CURRENT)
+  primaryTitle                  String             @map("primary_title")
+  alternativeTitles             Json               @map("alternative_titles")
+  targetAudience                Json               @map("target_audience")
+  intentType                    ReaderIntentType   @map("intent_type")
+  intent                        Json
+  angle                         String
+  purpose                       String
+  scope                         Json
+  exclusions                    Json
+  articleType                   ArticleType        @map("article_type")
+  targetDepth                   String             @map("target_depth")
+  tone                          String
+  outline                       Json
+  keyClaims                     Json               @map("key_claims")
+  requiredSources               Json               @map("required_sources")
+  questionsToAnswer             Json               @map("questions_to_answer")
+  definitions                   Json
+  examples                      Json
+  statistics                    Json
+  risksAndCaveats               Json               @map("risks_and_caveats")
+  researchGaps                  Json               @map("research_gaps")
+  internalLinkSuggestions       Json               @map("internal_link_suggestions")
+  externalReferenceRequirements Json               @map("external_reference_requirements")
+  draftingInstructions          Json               @map("drafting_instructions")
+  qualityRequirements           Json               @map("quality_requirements")
+  estimatedWordCountMinimum     Int                @map("estimated_word_count_minimum")
+  estimatedWordCountMaximum     Int                @map("estimated_word_count_maximum")
+  researchSnapshot              Json               @map("research_snapshot")
+  researchSnapshotFingerprint   String             @map("research_snapshot_fingerprint")
+  inputFingerprint              String             @map("input_fingerprint")
+  metadata                      Json?
+  createdAt                     DateTime           @default(now()) @map("created_at")
+  updatedAt                     DateTime           @updatedAt @map("updated_at")
+  site                          Site               @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  topic                         Topic              @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  briefGenerationJob            BriefGenerationJob @relation(fields: [briefGenerationJobId], references: [id], onDelete: Restrict)
+  researchJob                   ResearchJob        @relation(fields: [researchJobId], references: [id], onDelete: Restrict)
+  aiUsage                       AiUsage[]
+
+  @@unique([topicId, version])
+  @@unique([topicId, inputFingerprint])
+  @@index([siteId, status, createdAt])
+  @@index([topicId, createdAt])
+  @@map("content_briefs")
+}
+
 model AiUsage {
-  id                  String        @id @default(cuid())
-  researchJobId       String        @map("research_job_id")
-  researchJobSourceId String        @map("research_job_source_id")
-  researchNoteId      String?       @map("research_note_id")
-  requestKey          String        @unique @map("request_key")
-  provider            String
-  model               String
-  inputTokens         Int?          @map("input_tokens")
-  outputTokens        Int?          @map("output_tokens")
-  estimatedCostUsd    Decimal?      @db.Decimal(12, 6) @map("estimated_cost_usd")
-  requestDurationMs   Int           @map("request_duration_ms")
-  status              AiUsageStatus
-  errorCode           String?       @map("error_code")
-  promptTemplateVersion String      @map("prompt_template_version")
-  createdAt           DateTime      @default(now()) @map("created_at")
-  researchJob         ResearchJob   @relation(fields: [researchJobId], references: [id], onDelete: Cascade)
-  researchJobSource   ResearchJobSource @relation(fields: [researchJobSourceId], references: [id], onDelete: Cascade)
-  researchNote        ResearchNote? @relation(fields: [researchNoteId], references: [id], onDelete: SetNull)
+  id                   String              @id @default(cuid())
+  researchJobId        String?             @map("research_job_id")
+  researchJobSourceId  String?             @map("research_job_source_id")
+  researchNoteId       String?             @map("research_note_id")
+  briefGenerationJobId String?             @map("brief_generation_job_id")
+  contentBriefId       String?             @map("content_brief_id")
+  operationType        AiOperationType     @default(RESEARCH_SOURCE_NOTES) @map("operation_type")
+  requestKey           String              @unique @map("request_key")
+  provider             String
+  model                String
+  inputTokens          Int?                @map("input_tokens")
+  outputTokens         Int?                @map("output_tokens")
+  estimatedCostUsd     Decimal?            @db.Decimal(12, 6) @map("estimated_cost_usd")
+  requestDurationMs    Int                 @map("request_duration_ms")
+  status               AiUsageStatus
+  errorCode            String?             @map("error_code")
+  promptTemplateVersion String             @map("prompt_template_version")
+  createdAt            DateTime            @default(now()) @map("created_at")
+  researchJob          ResearchJob?        @relation(fields: [researchJobId], references: [id], onDelete: Cascade)
+  researchJobSource    ResearchJobSource?  @relation(fields: [researchJobSourceId], references: [id], onDelete: Cascade)
+  researchNote         ResearchNote?       @relation(fields: [researchNoteId], references: [id], onDelete: SetNull)
+  briefGenerationJob   BriefGenerationJob? @relation(fields: [briefGenerationJobId], references: [id], onDelete: Cascade)
+  contentBrief         ContentBrief?       @relation(fields: [contentBriefId], references: [id], onDelete: SetNull)
 
   @@index([researchJobId, createdAt])
+  @@index([briefGenerationJobId, createdAt])
   @@map("ai_usage")
 }

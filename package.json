@@ -15,6 +15,7 @@
     "test:integration": "tsx scripts/run-integration-tests.ts",
     "test:smoke:rss": "tsx scripts/smoke-rss-collector.ts",
     "test:smoke:research": "tsx scripts/smoke-research-engine.ts",
+    "test:smoke:brief": "tsx scripts/smoke-content-brief.ts",
     "test:smoke:topic-intake": "tsx scripts/smoke-topic-intake.ts",
     "test:e2e:install": "playwright install chromium",
     "test:e2e": "playwright test",

@@ -1,12 +1,17 @@
 import "server-only";
 
 import {
+  contentBriefEnvironmentSchema,
   databaseEnvironmentSchema,
   internalApiEnvironmentSchema,
   loggingEnvironmentSchema,
   researchEnvironmentSchema,
   rssCollectorEnvironmentSchema,
 } from "@ai-publishing-os/schemas";
+
+export function getContentBriefEnvironment() {
+  return contentBriefEnvironmentSchema.parse(process.env);
+}
 
 export function getDatabaseEnvironment() {
   return databaseEnvironmentSchema.parse(process.env);

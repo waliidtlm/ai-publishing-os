@@ -1,0 +1,362 @@
+{
+  "name": "AI Publishing OS - Content Brief Generator",
+  "nodes": [
+    {
+      "id": "2c850b4d-6caf-48e0-9bd3-5797e9d523df",
+      "name": "Manual Test Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 160],
+      "parameters": {}
+    },
+    {
+      "id": "4cdac688-9b4b-40af-85be-46f390ac4b78",
+      "name": "Configure Brief Run",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [260, 280],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "topic-id",
+              "name": "topicId",
+              "type": "string",
+              "value": "={{ $env.CONTENT_BRIEF_TOPIC_ID }}"
+            },
+            {
+              "id": "brief-mode",
+              "name": "mode",
+              "type": "string",
+              "value": "={{ $env.CONTENT_BRIEF_MODE || \"deterministic\" }}"
+            },
+            {
+              "id": "trigger-type",
+              "name": "triggerType",
+              "type": "string",
+              "value": "n8n"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "0deca890-0d50-4650-94bd-21d38c80f229",
+      "name": "Create Brief Job",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [520, 280],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AI_PUBLISHING_OS_BASE_URL + '/api/internal/topics/' + $json.topicId + '/brief-jobs' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ { mode: $json.mode, triggerType: $json.triggerType, workflowExecutionReference: $execution.id } }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 15000
+        }
+      }
+    },
+    {
+      "id": "2f8a5395-09be-42bc-b646-455c12ea3804",
+      "name": "Brief Job Created?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [780, 280],
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.body.success }}",
+              "operator": { "operation": "true", "type": "boolean" },
+              "rightValue": true
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          }
+        }
+      }
+    },
+    {
+      "id": "23da5667-44b6-4ed2-9829-205c41ed0c0c",
+      "name": "Generate and Persist Brief",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [1040, 180],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AI_PUBLISHING_OS_BASE_URL + \"/api/internal/brief-jobs/\" + $(\"Create Brief Job\").item.json.body.data.job.id + \"/generate\" }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "{}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 120000
+        }
+      }
+    },
+    {
+      "id": "a0c4cef6-2fe9-42ca-89b9-1a8514732a85",
+      "name": "Brief Generated?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [1300, 180],
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.body.success }}",
+              "operator": { "operation": "true", "type": "boolean" },
+              "rightValue": true
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          }
+        }
+      }
+    },
+    {
+      "id": "1a3cb810-31d6-4529-be77-f335113cb629",
+      "name": "Read Stored Brief Job",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [1560, 80],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.AI_PUBLISHING_OS_BASE_URL + \"/api/internal/brief-jobs/\" + $(\"Create Brief Job\").item.json.body.data.job.id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": false,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 15000
+        }
+      }
+    },
+    {
+      "id": "9f0de4ba-2cd3-43eb-aca6-ba3751b367c1",
+      "name": "Present Brief Summary",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1820, 80],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "job-id",
+              "name": "briefJobId",
+              "type": "string",
+              "value": "={{ $json.body.data.id }}"
+            },
+            {
+              "id": "brief-id",
+              "name": "briefId",
+              "type": "string",
+              "value": "={{ $json.body.data.briefs[0].id }}"
+            },
+            {
+              "id": "version",
+              "name": "version",
+              "type": "number",
+              "value": "={{ $json.body.data.briefs[0].version }}"
+            },
+            {
+              "id": "title",
+              "name": "primaryTitle",
+              "type": "string",
+              "value": "={{ $json.body.data.briefs[0].primaryTitle }}"
+            },
+            {
+              "id": "topic-status",
+              "name": "topicStatus",
+              "type": "string",
+              "value": "={{ $json.body.data.topic.status }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "b5933606-fbcc-45ca-ad96-e9661c99eaf3",
+      "name": "Present Safe Failure",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1300, 420],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "success",
+              "name": "success",
+              "type": "boolean",
+              "value": false
+            },
+            {
+              "id": "status-code",
+              "name": "statusCode",
+              "type": "number",
+              "value": "={{ $json.statusCode }}"
+            },
+            {
+              "id": "error-code",
+              "name": "errorCode",
+              "type": "string",
+              "value": "={{ $json.body.error?.code || \"unknown_error\" }}"
+            },
+            {
+              "id": "error-message",
+              "name": "errorMessage",
+              "type": "string",
+              "value": "={{ $json.body.error?.message || \"The brief workflow failed safely.\" }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "9ccfe974-2155-4ac5-bc58-00ae03a40527",
+      "name": "Disabled Daily Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [0, 420],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "daysInterval": 1,
+              "field": "days",
+              "triggerAtHour": 3,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "disabled": true
+    },
+    {
+      "id": "fb718091-d49f-4ff5-b1e9-63479446b130",
+      "name": "Setup",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [210, 230],
+      "parameters": {
+        "content": "## Setup\nSet `AI_PUBLISHING_OS_BASE_URL`, `CONTENT_BRIEF_TOPIC_ID`, and optional `CONTENT_BRIEF_MODE`. Attach the **AI Publishing OS Internal API** Header Auth credential (`X-API-Key`) to all HTTP nodes. No secret is embedded.",
+        "color": 5,
+        "width": 560,
+        "height": 200
+      }
+    },
+    {
+      "id": "b24bb2ca-f0dc-4ed0-b25b-b0fefa71a453",
+      "name": "Application Security Boundary",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [990, 30],
+      "parameters": {
+        "content": "## Application security boundary\nThe application selects research, builds prompts, invokes deterministic/OpenAI providers, validates every ID and source, versions the brief, persists it, and transitions the topic. n8n only orchestrates bounded API calls.",
+        "color": 7,
+        "width": 820,
+        "height": 300
+      }
+    },
+    {
+      "id": "b5c8e73f-a7b3-4696-9a36-61d983cb4548",
+      "name": "Schedule Disabled",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-50, 370],
+      "parameters": {
+        "content": "## Schedule disabled\nTest manually first. If enabled later, use an interval longer than worst-case generation time. The database prevents overlapping active jobs.",
+        "color": 3,
+        "width": 300,
+        "height": 200
+      }
+    }
+  ],
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [[{ "node": "Configure Brief Run", "type": "main", "index": 0 }]]
+    },
+    "Configure Brief Run": {
+      "main": [[{ "node": "Create Brief Job", "type": "main", "index": 0 }]]
+    },
+    "Create Brief Job": {
+      "main": [[{ "node": "Brief Job Created?", "type": "main", "index": 0 }]]
+    },
+    "Brief Job Created?": {
+      "main": [
+        [
+          {
+            "node": "Generate and Persist Brief",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [{ "node": "Present Safe Failure", "type": "main", "index": 0 }]
+      ]
+    },
+    "Generate and Persist Brief": {
+      "main": [[{ "node": "Brief Generated?", "type": "main", "index": 0 }]]
+    },
+    "Brief Generated?": {
+      "main": [
+        [{ "node": "Read Stored Brief Job", "type": "main", "index": 0 }],
+        [{ "node": "Present Safe Failure", "type": "main", "index": 0 }]
+      ]
+    },
+    "Read Stored Brief Job": {
+      "main": [
+        [{ "node": "Present Brief Summary", "type": "main", "index": 0 }]
+      ]
+    },
+    "Disabled Daily Schedule": {
+      "main": [[{ "node": "Configure Brief Run", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

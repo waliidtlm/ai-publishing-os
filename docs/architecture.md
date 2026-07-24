@@ -10,6 +10,11 @@ webpage extraction, deterministic/OpenAI structured notes, claim provenance,
 and n8n orchestration. It does not implement articles, final briefs, WordPress
 publishing, or analytics.
 
+Phase 4 adds versioned, source-grounded content briefs with immutable research
+snapshots, deterministic/OpenAI provider isolation, strict provenance
+validation, and the `brief_ready` to `drafting` transition. It still does not
+draft or publish articles.
+
 ## Components
 
 ### Dashboard

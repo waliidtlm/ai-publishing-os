@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 
 import {
+  contentBriefEnvironmentSchema,
   developmentAuthEnvironmentSchema,
   researchEnvironmentSchema,
   serverEnvironmentSchema,
@@ -15,6 +16,7 @@ config({
 try {
   serverEnvironmentSchema.parse(process.env);
   researchEnvironmentSchema.parse(process.env);
+  contentBriefEnvironmentSchema.parse(process.env);
 
   if ((process.env.NODE_ENV ?? "development") === "development") {
     developmentAuthEnvironmentSchema.parse(process.env);
